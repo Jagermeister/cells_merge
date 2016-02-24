@@ -1,0 +1,229 @@
+<html>
+<head>
+	<title>cells</title>
+</head>
+<body>
+	<canvas id="cells" width="500" height="500" style="border:1px solid #000000;"></canvas>
+	<script type="text/javascript">
+		"use strict";
+		//Classes
+		class Entity {
+			// Common parent for all displayed entites
+			constructor(context, x, y) {
+				this.context = context;
+				this.x = x;
+				this.y = y;
+				this.velocity_x = 0;
+				this.velocity_y = 0;
+				this.velocity_extremum = 0;
+				this.velocity_acceleration = 0;
+			}
+
+			update(delta) {
+				this.x += this.velocity_x * delta/1000;
+				this.y += this.velocity_y * delta/1000;
+			}
+
+			display() {
+				throw new Error("Provide concrete implementation");
+			}
+		}
+
+
+		class Pellet extends Entity {
+				// Consumables
+			constructor(context, x, y, size) {
+				super(context, x, y);
+				this.size = size;
+				this.color =  "#" + Math.floor(Math.random() * 16777215).toString(16);
+			}
+
+			update(delta) {
+
+			}
+
+			display() {
+				this.context.beginPath();
+				this.context.arc(
+					this.x,
+					this.y,
+					this.size,
+					0,
+					Math.PI*2,
+					true);
+				this.context.fillStyle = this.color;
+				this.context.fill();
+			}
+		}
+
+		class Player extends Entity {
+				// The player, with user input
+			constructor(context, x, y, size) {
+				super(context, x, y);
+				this.size = size;
+				// User Input Interpreted
+				this.is_west_requested = false;
+				this.is_north_requested = false;
+				this.is_east_requested = false;
+				this.is_south_requested = false;
+				// Velocity
+				this.velocity_extremum = 500;
+				this.velocity_acceleration = 325;
+			}
+
+			update(delta) {
+				var x_before = this.x;
+				var y_before = this.y;
+				if (this.is_west_requested ^ this.is_east_requested) {
+					if (this.is_west_requested) {
+						this.velocity_x -= this.velocity_acceleration * delta/1000;
+					} else {
+						this.velocity_x += this.velocity_acceleration * delta/1000;
+					}
+				} else {
+					if (this.velocity_x > 0) {
+						this.velocity_x -= this.velocity_acceleration * delta/1000;
+					} else if (this.velocity_x < 0) {
+						this.velocity_x += this.velocity_acceleration * delta/1000;
+					}
+				}
+
+				if (this.is_north_requested ^ this.is_south_requested) {
+					if (this.is_north_requested) {
+						this.velocity_y -= this.velocity_acceleration * delta/1000;
+					} else {
+						this.velocity_y += this.velocity_acceleration * delta/1000;
+					}
+				} else {
+					if (this.velocity_y > 0) {
+						this.velocity_y -= this.velocity_acceleration * delta/1000;
+					} else if (this.velocity_y < 0) {
+						this.velocity_y += this.velocity_acceleration * delta/1000;
+					}
+				}
+
+				if (this.velocity_x > this.velocity_extremum) {
+					this.velocity_x = this.velocity_extremum;
+				} else if (this.velocity_x < -1*this.velocity_extremum) {
+					this.velocity_x = -1 * this.velocity_extremum;
+				} else if (this.velocity_x > -1 && this.velocity_x < 1) {
+					this.velocity_x = 0;
+				}
+
+				if (this.velocity_y > this.velocity_extremum) {
+					this.velocity_y = this.velocity_extremum;
+				} else if (this.velocity_y < -1*this.velocity_extremum) {
+					this.velocity_y = -1 * this.velocity_extremum;
+				} else if (this.velocity_y > -1 && this.velocity_y < 1) {
+					this.velocity_y = 0;
+				}
+
+				super.update(delta);
+				if (this.x - this.size < 0 || this.x + this.size > canvas_width) {
+					this.x = x_before;
+					this.velocity_x = 0;
+				}
+
+				if (this.y - this.size < 0 || this.y + this.size > canvas_height) {
+					this.y = y_before;
+					this.velocity_y = 0;
+				}
+			}
+
+			display() {
+				this.context.beginPath();
+				this.context.arc(
+					this.x,
+					this.y,
+					this.size,
+					0,
+					Math.PI*2,
+					true);
+				this.context.fillStyle = "#7200da";
+				this.context.fill();
+			}
+		}
+	</script>
+
+	<script type="text/javascript">
+		//View
+		var canvas = document.getElementById("cells");
+		canvas.tabIndex = 0;
+		canvas.focus();
+		//TODO: Global canvas bounds
+		var canvas_width = canvas.width;
+		var canvas_height = canvas.height;
+		var ctx = canvas.getContext("2d");
+
+		var player = null;
+		var pellets = [];
+		function init() {
+			//Initialize
+			player = new Player(ctx, 250, 250, 10);
+			for(var i = 0; i < 10; i ++) {
+				pellets.push(new Pellet(
+						ctx,
+						Math.random() * canvas_width,
+						Math.random() * canvas_height,
+						5
+					));
+			}
+		}
+
+		//Handle User Input
+		var keyDown = new Array();
+		window.addEventListener("keydown", function(event) {
+			keyDown[event.keyCode.toString()] = true;
+		});
+		window.addEventListener("keyup", function(event) {
+			keyDown[event.keyCode.toString()] = false;
+		});
+
+		function update(delta) {
+			//Apply input
+			if (typeof(keyDown["37"]) === "boolean") {
+				player.is_west_requested = keyDown["37"];
+			}
+			if (typeof(keyDown["38"]) === "boolean") {
+				player.is_north_requested = keyDown["38"];
+			}
+			if (typeof(keyDown["39"]) === "boolean") {
+				player.is_east_requested = keyDown["39"];
+			}
+			if (typeof(keyDown["40"]) === "boolean") {
+				player.is_south_requested = keyDown["40"];
+			}
+
+			player.update(delta);
+
+			for(var i = 0; i < pellets.length; i++) {
+				pellets[i].update(delta);
+			}
+		}
+
+		function display() {
+			ctx.clearRect(0, 0, 500, 500);
+			player.display();
+			for(var i = 0; i < pellets.length; i++) {
+				pellets[i].display();
+			}
+		}
+
+		window.onload = function() {
+			init();
+
+			//Game Loop
+			var mainloop_updateLast = null;
+			(function mainLoop(nowTime) {
+				if (!mainloop_updateLast) mainloop_updateLast = nowTime;
+				var delta = nowTime - mainloop_updateLast;
+				mainloop_updateLast = nowTime;
+				//handle_events(
+				update(delta);
+				display();
+				requestAnimationFrame(mainLoop);
+			})(performance.now());
+		}
+	</script>
+</body>
+</html>
