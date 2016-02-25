@@ -2,29 +2,41 @@
 <head>
 	<title>cells</title>
 </head>
-<body>
-	<canvas id="cells" width="500" height="500" style="border:1px solid #000000;"></canvas>
+<body bgcolor="#FFF0F5">
+	<canvas id="cells" width="500" height="500" style="background-color: #F0F8FF"></canvas>
 	<script type="text/javascript">
 		"use strict";
 		//Classes
 		class Entity {
 			// Common parent for all displayed entites
-			constructor(context, x, y) {
+			constructor(context, x, y, size, color) {
 				this.context = context;
 				this.x = x;
 				this.y = y;
+				this.color = color;
+				this.size_set(size);
 				this.velocity_x = 0;
 				this.velocity_y = 0;
-				this.velocity_extremum = 0;
-				this.velocity_acceleration = 0;
+			}
+
+			size_set (size) {
+				if (size != this.size) {
+					this.size = size;
+					this.radius = Math.sqrt(this.size / Math.PI);
+					this.velocity_acceleration = 2.2 * Math.pow(this.size, -0.439);
+				}
 			}
 
 			update(delta) {
-				this.x += this.velocity_x * delta/1000;
-				this.y += this.velocity_y * delta/1000;
+				this.x += this.velocity_x;
+				this.y += this.velocity_y;
 			}
 
 			display() {
+				throw new Error("Provide concrete implementation");
+			}
+
+			onConsume(entity) {
 				throw new Error("Provide concrete implementation");
 			}
 		}
@@ -32,14 +44,18 @@
 
 		class Pellet extends Entity {
 				// Consumables
-			constructor(context, x, y, size) {
-				super(context, x, y);
-				this.size = size;
-				this.color =  "#" + Math.floor(Math.random() * 16777215).toString(16);
+			constructor(context, x, y, size, color) {
+				if (color == null) {
+					color =  "#" + Math.floor(Math.random() * 16777215).toString(16);
+				}
+
+				super(context, x, y, size, color);
 			}
 
 			update(delta) {
-
+				this.velocity_x *= .95;
+				this.velocity_y *= .95;
+				super.update(delta);
 			}
 
 			display() {
@@ -47,7 +63,7 @@
 				this.context.arc(
 					this.x,
 					this.y,
-					this.size,
+					this.radius,
 					0,
 					Math.PI*2,
 					true);
@@ -59,72 +75,44 @@
 		class Player extends Entity {
 				// The player, with user input
 			constructor(context, x, y, size) {
-				super(context, x, y);
-				this.size = size;
-				// User Input Interpreted
-				this.is_west_requested = false;
-				this.is_north_requested = false;
-				this.is_east_requested = false;
-				this.is_south_requested = false;
-				// Velocity
-				this.velocity_extremum = 500;
-				this.velocity_acceleration = 325;
+				super(context, x, y, size, "#7200da");
+				this.is_split_ready = true;
+				this.is_eject_ready = true;
+				// Target
+				this.targetX = this.x;
+				this.targetY = this.y;
+			}
+
+			target_update(targetX, targetY) {
+				this.targetX = targetX;
+				this.targetY = targetY;
 			}
 
 			update(delta) {
+				this.size_set (this.size - this.size * 0.002 * delta/1000);
 				var x_before = this.x;
 				var y_before = this.y;
-				if (this.is_west_requested ^ this.is_east_requested) {
-					if (this.is_west_requested) {
-						this.velocity_x -= this.velocity_acceleration * delta/1000;
-					} else {
-						this.velocity_x += this.velocity_acceleration * delta/1000;
-					}
-				} else {
-					if (this.velocity_x > 0) {
-						this.velocity_x -= this.velocity_acceleration * delta/1000;
-					} else if (this.velocity_x < 0) {
-						this.velocity_x += this.velocity_acceleration * delta/1000;
-					}
-				}
 
-				if (this.is_north_requested ^ this.is_south_requested) {
-					if (this.is_north_requested) {
-						this.velocity_y -= this.velocity_acceleration * delta/1000;
-					} else {
-						this.velocity_y += this.velocity_acceleration * delta/1000;
-					}
-				} else {
-					if (this.velocity_y > 0) {
-						this.velocity_y -= this.velocity_acceleration * delta/1000;
-					} else if (this.velocity_y < 0) {
-						this.velocity_y += this.velocity_acceleration * delta/1000;
-					}
-				}
+				var tv = this.targetX - this.x;
+				var uv = this.targetY - this.y;
+				var x_mult = tv > 0 ? 1 : -1;
+				var y_mult = uv > 0 ? 1 : -1;
+				uv = Math.abs(uv);
+				tv = Math.abs(tv);
 
-				if (this.velocity_x > this.velocity_extremum) {
-					this.velocity_x = this.velocity_extremum;
-				} else if (this.velocity_x < -1*this.velocity_extremum) {
-					this.velocity_x = -1 * this.velocity_extremum;
-				} else if (this.velocity_x > -1 && this.velocity_x < 1) {
-					this.velocity_x = 0;
-				}
-
-				if (this.velocity_y > this.velocity_extremum) {
-					this.velocity_y = this.velocity_extremum;
-				} else if (this.velocity_y < -1*this.velocity_extremum) {
-					this.velocity_y = -1 * this.velocity_extremum;
-				} else if (this.velocity_y > -1 && this.velocity_y < 1) {
-					this.velocity_y = 0;
+				var theta_r = Math.abs(Math.atan(uv/tv));
+				if (theta_r) {
+					this.velocity_x = Math.cos(theta_r) * this.velocity_acceleration * x_mult;
+					this.velocity_y = Math.sin(theta_r) * this.velocity_acceleration * y_mult;
 				}
 
 				super.update(delta);
-				if (this.x - this.size < 0 || this.x + this.size > canvas_width) {
+				if (this.x - this.radius < 0 || this.x + this.radius > canvas_width) {
 					this.x = x_before;
 					this.velocity_x = 0;
 				}
 
-				if (this.y - this.size < 0 || this.y + this.size > canvas_height) {
+				if (this.y - this.radius < 0 || this.y + this.radius > canvas_height) {
 					this.y = y_before;
 					this.velocity_y = 0;
 				}
@@ -135,13 +123,86 @@
 				this.context.arc(
 					this.x,
 					this.y,
-					this.size,
+					this.radius,
 					0,
 					Math.PI*2,
 					true);
-				this.context.fillStyle = "#7200da";
+				this.context.fillStyle = this.color;
 				this.context.fill();
+				this.context.strokeStyle = "rgba(255,0,0,0.5)";
+				this.context.font = "10px Courier New"
+				var text = this.context.measureText(parseInt(this.size));
+				this.context.strokeText(parseInt(this.size), this.x - text.width/2, this.y + 2.5);
 			}
+
+			onConsume(entity) {
+				this.size_set(this.size + entity.size)
+				if (this.x - this.radius < 0) {
+					this.x = this.radius;
+				} else if (this.x + this.radius > canvas_width) {
+					this.x = canvas_width - this.radius;
+				}
+				
+				if (this.y - this.radius < 0) {
+					this.y = this.radius;
+				} else if (this.y + this.radius > canvas_height) {
+					this.y = canvas_height - this.radius;
+				}
+			}
+
+			onEject() {
+				if (this.is_eject_ready && this.size > 35) {
+					this.is_eject_ready = false;
+					this.size_set(this.size - 18);
+					var pellet = new Pellet(this.context, this.x, this.y, 14.4, this.color);
+					pellets.push(pellet);
+
+					var tv = this.targetX - pellet.x;
+					var uv = this.targetY - pellet.y;
+					var x_mult = tv > 0 ? 1 : -1;
+					var y_mult = uv > 0 ? 1 : -1;
+					uv = Math.abs(uv);
+					tv = Math.abs(tv);
+
+					var theta_r = Math.abs(Math.atan(uv/tv));
+					if (theta_r) {
+						pellet.velocity_x = Math.cos(theta_r) * pellet.velocity_acceleration * x_mult;
+						pellet.velocity_y = Math.sin(theta_r) * pellet.velocity_acceleration * y_mult;
+						pellet.x += (1 + Math.cos(theta_r) * (this.radius + pellet.radius)) * x_mult
+						pellet.y += (1 + Math.sin(theta_r) * (this.radius + pellet.radius)) * y_mult;
+					}
+				}
+			}
+
+			onEjectUp() {
+				this.is_eject_ready = true;
+			}
+
+			onSplit() {
+				if (this.is_split_ready && this.size > 35) {
+					this.is_split_ready = false;
+				}
+			}
+
+			onSplitUp() {
+				this.is_split_ready = true;
+			}
+		}
+	</script>
+
+	<script type="text/javascript">
+		var entity_consume_size_multiplier = 1.25;
+			// You have to be 25% bigger to consume
+		function collison_consume_circle(entity1, entity2) {
+			// Player, Pellet
+			if(
+				((entity1.radius + entity2.radius) * (entity1.radius + entity2.radius)) >=
+				((entity1.x - entity2.x) * (entity1.x - entity2.x) + (entity1.y - entity2.y) * (entity1.y - entity2.y))
+			){
+					return [entity1, entity2];
+			}
+
+			return [null, null];
 		}
 	</script>
 
@@ -153,25 +214,36 @@
 		//TODO: Global canvas bounds
 		var canvas_width = canvas.width;
 		var canvas_height = canvas.height;
+		var canvas_bounds = canvas.getBoundingClientRect();
 		var ctx = canvas.getContext("2d");
 
 		var player = null;
 		var pellets = [];
+		pellets['count_initial'] = 200;
+		pellets['count_max'] = 250;
+		pellets['size_spawn'] = 5;
+		pellets['spawn_ms_since'] = 0;
+		pellets['spawn_ms_cooldown'] = 1000;
+
 		function init() {
 			//Initialize
 			player = new Player(ctx, 250, 250, 10);
-			for(var i = 0; i < 10; i ++) {
+			var pellet_size = pellets.size_spawn;
+			for(var i = 0; i < pellets.count_initial; i ++) {
 				pellets.push(new Pellet(
 						ctx,
-						Math.random() * canvas_width,
-						Math.random() * canvas_height,
-						5
+						pellet_size + Math.random() * (canvas_width - pellet_size * 2),
+						pellet_size + Math.random() * (canvas_height - pellet_size * 2),
+						pellet_size
 					));
 			}
 		}
 
 		//Handle User Input
 		var keyDown = new Array();
+		canvas.addEventListener("mousemove", function(event) {
+			player.target_update(event.clientX - canvas_bounds.left, event.clientY - canvas_bounds.top)
+		});
 		window.addEventListener("keydown", function(event) {
 			keyDown[event.keyCode.toString()] = true;
 		});
@@ -181,23 +253,42 @@
 
 		function update(delta) {
 			//Apply input
-			if (typeof(keyDown["37"]) === "boolean") {
-				player.is_west_requested = keyDown["37"];
+			if (typeof(keyDown["32"]) === "boolean") {
+				if (keyDown["32"]) {
+					player.onSplit();
+				} else {
+					player.onSplitUp();
+				}
 			}
-			if (typeof(keyDown["38"]) === "boolean") {
-				player.is_north_requested = keyDown["38"];
-			}
-			if (typeof(keyDown["39"]) === "boolean") {
-				player.is_east_requested = keyDown["39"];
-			}
-			if (typeof(keyDown["40"]) === "boolean") {
-				player.is_south_requested = keyDown["40"];
+			if (typeof(keyDown["87"]) === "boolean") {
+				if (keyDown["87"]) {
+					player.onEject();
+				} else {
+					player.onEjectUp();
+				}
 			}
 
 			player.update(delta);
-
-			for(var i = 0; i < pellets.length; i++) {
+			for(var i = pellets.length; i--;) {
 				pellets[i].update(delta);
+				var consumption = collison_consume_circle(player, pellets[i]);
+				if (consumption[0]) {
+					consumption[0].onConsume(consumption[1]);
+					pellets.splice(i, 1);
+				}
+			}
+
+			if (pellets.length < pellets.count_max) {
+				pellets.spawn_ms_since += delta;
+				if (pellets.spawn_ms_since >= pellets.spawn_ms_cooldown) {
+					pellets.spawn_ms_since = 0;
+					pellets.push(new Pellet(
+							ctx,
+							pellets.size_spawn + Math.random() * (canvas_width - pellets.size_spawn * 2),
+							pellets.size_spawn + Math.random() * (canvas_height - pellets.size_spawn * 2),
+							pellets.size_spawn
+						));
+				}
 			}
 		}
 
@@ -211,14 +302,12 @@
 
 		window.onload = function() {
 			init();
-
 			//Game Loop
 			var mainloop_updateLast = null;
 			(function mainLoop(nowTime) {
 				if (!mainloop_updateLast) mainloop_updateLast = nowTime;
 				var delta = nowTime - mainloop_updateLast;
 				mainloop_updateLast = nowTime;
-				//handle_events(
 				update(delta);
 				display();
 				requestAnimationFrame(mainLoop);
