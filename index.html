@@ -83,16 +83,40 @@
 				this.context.fill();
 			}
 
+			update(delta) {
+				this.velocity_x *= .95;
+				this.velocity_y *= .95;
+					//TODO: fix deceleration
+				super.update(delta);
+			}
+
 			onConsume(entity) {
 				this.consumedCount++;
-				if (this.consumedCount >= 8) {
-					//create new virus
+				this.size_set(this.size + entity.size);
+				if (this.consumedCount >= 4) {
 					this.consumedCount = 0;
+					this.size_set(100);
+					let v = new Virus(this.context, this.x, this.y);
+					v.velocity_x = entity.velocity_x * 2;
+					v.velocity_y = entity.velocity_y * 2;
+					viruss[v.UID] = v;
 				}
 			}
 
 			onConsumed(entity) {
 				// Split entity into 16-sum(entity.count)
+				let parent = players[entity.parent_uid];
+				let pieces = Math.min(16 - parent.cells.length, Math.floor(entity.size / 9), 4) - 1;
+				if (pieces > 0) {
+					let size = Math.floor(entity.size / pieces);
+					entity.size_set(size);
+					entity.time_spent_split = 0;
+					for (let i = 0; i < pieces; i++) {
+						let c = parent.cell_create(this.x, this.y, size);
+						// Need to push them apart!
+						cells[c.UID] = c;
+					}
+				}
 			}
 		}
 
@@ -130,10 +154,7 @@
 				super(context, x, y, size, color);
 				// Parents, Combination
 				this.parent_uid = parent_uid;
-				this.time_to_combine = 0;
-				// Functionality
-				this.is_split_ready = true;
-				this.is_eject_ready = true;
+				this.time_spent_split = 0;
 			}
 
 			update(delta) {
@@ -142,6 +163,8 @@
 				}
 				var x_before = this.x;
 				var y_before = this.y;
+
+				this.time_spent_split += delta;
 
 				var tv = players[this.parent_uid].targetX - this.x;
 				var uv = players[this.parent_uid].targetY - this.y;
@@ -165,6 +188,29 @@
 				if (this.y - this.radius < 0 || this.y + this.radius > canvas_height) {
 					this.y = y_before;
 					this.velocity_y = 0;
+				}
+
+				if (this.time_spent_split < 15000) {
+					let was_colliding = false;
+					let is_colliding = false;
+					for(let i = 0; i < players[this.parent_uid].cells.length; i++) {
+						let c = players[this.parent_uid].cells[i];
+						if (c.UID != this.UID && c.time_spent_split < 15000) {
+							let d = Math.sqrt(Math.pow(this.x - c.x, 2) + Math.pow(this.y - c.y, 2));
+							let db = Math.sqrt(Math.pow(x_before - c.x, 2) + Math.pow(y_before - c.y, 2));
+							if (d < c.radius + this.radius) {
+								is_colliding = true;
+							}
+							if (db < c.radius + this.radius) {
+								was_colliding = true;
+							}
+						}
+					}
+
+					if (!was_colliding && is_colliding) {
+						this.x = x_before;
+						this.y = y_before;
+					}
 				}
 			}
 
@@ -248,6 +294,9 @@
 				this.color = color;
 				this.UID = Math.floor(Math.random() * 16777215);//0x1000000
 				this.state = 0;
+				// Functionality
+				this.is_split_ready = true;
+				this.is_eject_ready = true;
 				// Children
 				this.cells = [];
 				this.cell_class = Cell;
@@ -311,7 +360,7 @@
 					for(var i = 0; i < this.cells.length; i++) {
 						var c = this.cells[i];
 						if (c.size > 35) {
-							c.size_set(this.size - 18);
+							c.size_set(c.size - 18);
 							var p = new Pellet(this.context, c.x, c.y, 14.4, c.color);
 							pellets[p.UID] = p;
 
@@ -353,7 +402,7 @@
 			toString() {
 				var x_y = this.position_average();
 				var s = padLeft(" ", this.constructor.name, 7) + " " + padLeft("0",this.UID, 8) + " " + padLeft("0", parseInt(this.size()), 4) + " " + 
-							padLeft("0", parseInt(x_y[0]), 3) + "," + padLeft("0", parseInt(x_y[1]), 3);
+							padLeft("0", parseInt(x_y[0]), 3) + "," + padLeft("0", parseInt(x_y[1]), 3) + "  " + padLeft("0", this.cells.length, 2);
 				return s;
 			}
 
@@ -376,20 +425,9 @@
 			}
 		}
 
-		class EnemyCell extends Cell {
-			constructor(context, x, y, size, color, parent_uid) {
-				super(context, x, y, size, color, parent_uid);
-			}
-
-			update(delta) {
-				super.update(delta);
-			}
-		}
-
 		class Enemy extends Player {
 			constructor(context, color) {
 				super(context, color);
-				this.cell_class = EnemyCell;
 			}
 
 			update(delta) {
@@ -456,16 +494,15 @@
 		}
 
 		function collision_consume_cell(e1, e2) {
+			var d = Math.sqrt(Math.pow(e1.x - e2.x, 2) + Math.pow(e1.y - e2.y, 2));
 			if (e1.parent_uid == null || e1.parent_uid != e2.parent_uid) {
 				if (e1.size / entity_consume_size_multiplier >= e2.size) {
-					var d = Math.sqrt(Math.pow(e1.x - e2.x, 2) + Math.pow(e1.y - e2.y, 2));
 					if (d <= (e1.radius - e2.radius * 0.15)) {
 						return [e1, e2];
 					}
 				}
-			} else if (e1.parent_uid == e2.parent_uid) {
-				// and consume time is up
-				// return [e1, e2];
+			} else if (e1.parent_uid == e2.parent_uid && e1.time_spent_split > 15000 && e2.time_spent_split > 15000 && d <= (e1.radius - e2.radius * 0.15)) {
+				return [e1, e2];
 			}
 
 			return [null, null];
@@ -477,6 +514,7 @@
 	</script>
 
 	<script type="text/javascript">
+		'use strict';
 		//View
 		var canvas = document.getElementById("cells");
 		canvas.tabIndex = 0;
@@ -548,7 +586,6 @@
 				},
 				["x", "y"]
 			);
-
 
 			for(var i = 0; i < virus_count_initial; i++) {
 				var r = Math.sqrt(100 / Math.PI);
@@ -647,21 +684,41 @@
 					cells[key].update(delta);
 				}
 
+				for(var key in viruss) {
+					viruss[key].update(delta);
+				}
+
 				for(var key in pellets) {
+					let is_consumed = false;
 					var pellet = pellets[key];
-					pellet.display();
+					pellet.update(delta);
+					// Pellets vs Cells
 					for(var cKey in cells) {
 						var consumption = collison_consume_circle(cells[cKey], pellet);
 						if (consumption[0]) {
 							consumption[0].onConsume(consumption[1]);
 							pellet_tree.remove(pellet.kdTreeKey);
 							delete pellets[pellet.UID];
+							is_consumed = true;
 							break;
+						}
+					}
+
+					if (!is_consumed) {
+						for(let vKey in viruss) {
+							let consumption = collison_consume_circle(viruss[vKey], pellet);
+							if (consumption[0]) {
+								consumption[0].onConsume(consumption[1]);
+								pellet_tree.remove(pellet.kdTreeKey);
+								delete pellets[pellet.UID];
+								break;
+							}
 						}
 					}
 				}
 
 				for(var k1 in cells) {
+					// Cells vs Cells
 					for(var k2 in cells) {
 						if (cells[k1].UID != cells[k2].UID) {
 							var consumption = collision_consume_cell(cells[k1], cells[k2]);
@@ -674,6 +731,15 @@
 									delete players[consumption[1].parent_uid];
 								}
 							}
+						}
+					}
+
+					for(let vKey in viruss) {
+						let consumption = collision_consume_cell(cells[k1], viruss[vKey]);
+						if (consumption[0]) {
+							consumption[0].onConsume(consumption[1]);
+							consumption[1].onConsumed(consumption[0]);
+							delete viruss[viruss[vKey].UID];
 						}
 					}
 				}
@@ -718,7 +784,7 @@
 			}
 
 			viewWidth = Math.sqrt(player.size() / Math.PI) / 0.05;
-			x_y = player.position_average();
+			let x_y = player.position_average();
 			viewX = x_y[0] - viewWidth/2;
 			if (viewX < 0) {
 				viewX = 0;
@@ -756,7 +822,7 @@
 				5, 12*1.5
 			);
 
-			ctx_info.strokeText("   NAME"+" "+"   UID  "+" "+"SIZE"+" "+"  X,Y  ", 5, 12*1.5*2);
+			ctx_info.strokeText("   NAME"+" "+"   UID  "+" "+"SIZE"+" "+"  X,Y  "+" "+"CELL", 5, 12*1.5*2);
 			ctx_info.strokeText(player.toString(), 5, 12*1.5*3);
 
 			var _enemycount = 3;
