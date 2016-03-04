@@ -1,3 +1,3 @@
 [submodule "external/kd-tree"]
 	path = external/kd-tree
-	url = git@github.com:ubilabs/kd-tree-javascript.git
+	url = https://github.com/ubilabs/kd-tree-javascript.git
