@@ -5,54 +5,75 @@
 <body bgcolor="#24AF69">
 	<canvas id="cells" width="720" height="720" style="background-color: #F0F8FF; float: left;"></canvas>
 	<br/>
-	<canvas id="info" width="500" height="500" style="background-color: #F0F8FF; margin: 10px;"></canvas>
-	<script type="text/javascript">
-	//TODO: Add actual github depend
-	/**
- * k-d Tree JavaScript - V 1.01
- *
- * https://github.com/ubilabs/kd-tree-javascript
- *
- * @author Mircea Pricop <pricop@ubilabs.net>, 2012
- * @author Martin Kleppe <kleppe@ubilabs.net>, 2012
- * @author Ubilabs http://ubilabs.net, 2012
- * @license MIT License <http://www.opensource.org/licenses/mit-license.php>
- */(function(e,t){if(typeof define==="function"&&define.amd){define(["exports"],t)}else if(typeof exports==="object"){t(exports)}else{t(e.commonJsStrict={})}})(this,function(e){function t(e,t,n){this.obj=e;this.left=null;this.right=null;this.parent=n;this.dimension=t}function n(e,n,i){function o(e,n,r){var s=n%i.length,u,a;if(e.length===0){return null}if(e.length===1){return new t(e[0],s,r)}e.sort(function(e,t){return e[i[s]]-t[i[s]]});u=Math.floor(e.length/2);a=new t(e[u],s,r);a.left=o(e.slice(0,u),n+1,a);a.right=o(e.slice(u+1),n+1,a);return a}function u(e){function t(e){if(e.left){e.left.parent=e;t(e.left)}if(e.right){e.right.parent=e;t(e.right)}}s.root=e;t(s.root)}var s=this;if(!Array.isArray(e))u(e,n,i);else this.root=o(e,0,null);this.toJSON=function(e){if(!e)e=this.root;var n=new t(e.obj,e.dimension,null);if(e.left)n.left=s.toJSON(e.left);if(e.right)n.right=s.toJSON(e.right);return n};this.insert=function(e){function n(t,r){if(t===null){return r}var s=i[t.dimension];if(e[s]<t.obj[s]){return n(t.left,t)}else{return n(t.right,t)}}var r=n(this.root,null),s,o;if(r===null){this.root=new t(e,0,null);return}s=new t(e,(r.dimension+1)%i.length,r);o=i[r.dimension];if(e[o]<r.obj[o]){r.left=s}else{r.right=s}};this.remove=function(e){function n(t){if(t===null){return null}if(t.obj===e){return t}var r=i[t.dimension];if(e[r]<t.obj[r]){return n(t.left,t)}else{return n(t.right,t)}}function r(e){function u(e,t){var n,r,s,o,a;if(e===null){return null}n=i[t];if(e.dimension===t){if(e.right!==null){return u(e.right,t)}return e}r=e.obj[n];s=u(e.left,t);o=u(e.right,t);a=e;if(s!==null&&s.obj[n]>r){a=s}if(o!==null&&o.obj[n]>a.obj[n]){a=o}return a}function a(e,t){var n,r,s,o,u;if(e===null){return null}n=i[t];if(e.dimension===t){if(e.left!==null){return a(e.left,t)}return e}r=e.obj[n];s=a(e.left,t);o=a(e.right,t);u=e;if(s!==null&&s.obj[n]<r){u=s}if(o!==null&&o.obj[n]<u.obj[n]){u=o}return u}var t,n,o;if(e.left===null&&e.right===null){if(e.parent===null){s.root=null;return}o=i[e.parent.dimension];if(e.obj[o]<e.parent.obj[o]){e.parent.left=null}else{e.parent.right=null}return}if(e.left!==null){t=u(e.left,e.dimension)}else{t=a(e.right,e.dimension)}n=t.obj;r(t);e.obj=n}var t;t=n(s.root);if(t===null){return}r(t)};this.nearest=function(e,t,o){function l(r){function d(e,n){f.push([e,n]);if(f.size()>t){f.pop()}}var s,o=i[r.dimension],u=n(e,r.obj),a={},c,h,p;for(p=0;p<i.length;p+=1){if(p===r.dimension){a[i[p]]=e[i[p]]}else{a[i[p]]=r.obj[i[p]]}}c=n(a,r.obj);if(r.right===null&&r.left===null){if(f.size()<t||u<f.peek()[1]){d(r,u)}return}if(r.right===null){s=r.left}else if(r.left===null){s=r.right}else{if(e[o]<r.obj[o]){s=r.left}else{s=r.right}}l(s);if(f.size()<t||u<f.peek()[1]){d(r,u)}if(f.size()<t||Math.abs(c)<f.peek()[1]){if(s===r.left){h=r.right}else{h=r.left}if(h!==null){l(h)}}}var u,a,f;f=new r(function(e){return-e[1]});if(o){for(u=0;u<t;u+=1){f.push([null,o])}}l(s.root);a=[];for(u=0;u<t;u+=1){if(f.content[u][0]){a.push([f.content[u][0].obj,f.content[u][1]])}}return a};this.balanceFactor=function(){function e(t){if(t===null){return 0}return Math.max(e(t.left),e(t.right))+1}function t(e){if(e===null){return 0}return t(e.left)+t(e.right)+1}return e(s.root)/(Math.log(t(s.root))/Math.log(2))}}function r(e){this.content=[];this.scoreFunction=e}r.prototype={push:function(e){this.content.push(e);this.bubbleUp(this.content.length-1)},pop:function(){var e=this.content[0];var t=this.content.pop();if(this.content.length>0){this.content[0]=t;this.sinkDown(0)}return e},peek:function(){return this.content[0]},remove:function(e){var t=this.content.length;for(var n=0;n<t;n++){if(this.content[n]==e){var r=this.content.pop();if(n!=t-1){this.content[n]=r;if(this.scoreFunction(r)<this.scoreFunction(e))this.bubbleUp(n);else this.sinkDown(n)}return}}throw new Error("Node not found.")},size:function(){return this.content.length},bubbleUp:function(e){var t=this.content[e];while(e>0){var n=Math.floor((e+1)/2)-1,r=this.content[n];if(this.scoreFunction(t)<this.scoreFunction(r)){this.content[n]=t;this.content[e]=r;e=n}else{break}}},sinkDown:function(e){var t=this.content.length,n=this.content[e],r=this.scoreFunction(n);while(true){var i=(e+1)*2,s=i-1;var o=null;if(s<t){var u=this.content[s],a=this.scoreFunction(u);if(a<r)o=s}if(i<t){var f=this.content[i],l=this.scoreFunction(f);if(l<(o==null?r:a)){o=i}}if(o!=null){this.content[e]=this.content[o];this.content[o]=n;e=o}else{break}}}};this.kdTree=n;e.kdTree=n;e.BinaryHeap=r})
-	</script>
+	<canvas id="info" width="500" height="600" style="background-color: #F0F8FF; margin: 10px;"></canvas>
+	<script type="text/javascript" src="external/kd-tree/kdTree-min.js"></script>
 	<script type="text/javascript">
 		"use strict";
 		//Classes
 		class Entity {
 			// Common parent for all displayed entites
-			constructor(context, x, y, size, color) {
+			constructor(context, x, y, size, color, parent_uid) {
 				this.context = context;
 				this.x = x;
 				this.y = y;
+				this.UID = Math.floor(Math.random() * 16777215);//0x1000000
+				this.parent_uid = parent_uid;
 				if (color == null) {
-					color =  "#" + Math.floor(Math.random() * 16777215).toString(16);
+					color =  "#" + this.UID.toString(16);
 				}
 				this.color = color;
-				this.UID = Math.floor(Math.random() * 16777215);//0x1000000
 				this.size_set(size);
+				this.kdTreeKey = {x: this.x, y: this.y, key: this.UID};
 				this.velocity_x = 0;
 				this.velocity_y = 0;
+			}
+
+			kdTreeKey_regenerate() {
+				this.kdTreeKey = {x: this.x, y: this.y, key: this.UID};
 			}
 
 			size_set (size) {
 				if (size != this.size) {
 					this.size = size;
-					this.radius = Math.sqrt(this.size / Math.PI);
 					this.velocity_acceleration = 2.2 * Math.pow(this.size, -0.439);
+					this.radius = Math.sqrt(this.size / Math.PI);
+					if (this.x - this.radius < 0) {
+						this.x = this.radius;
+					} else if (this.x + this.radius > canvas_width) {
+						this.x = canvas_width - this.radius;
+					}
+					
+					if (this.y - this.radius < 0) {
+						this.y = this.radius;
+					} else if (this.y + this.radius > canvas_height) {
+						this.y = canvas_height - this.radius;
+					}
 				}
 			}
 
 			update(delta) {
+				let x_before = this.x;
+				let y_before = this.y;
 				this.x += this.velocity_x;
 				this.y += this.velocity_y;
+				if (this.x - this.radius < 0 || this.x + this.radius > canvas_width) {
+					this.x = x_before;
+					this.velocity_x = 0;
+				}
+
+				if (this.y - this.radius < 0 || this.y + this.radius > canvas_height) {
+					this.y = y_before;
+					this.velocity_y = 0;
+				}
 			}
 
 			display() {
-				throw new Error("Provide concrete implementation");
+				this.context.beginPath();
+				this.context.arc(
+					this.x, this.y, this.radius,
+					0, Math.PI*2, true);
+				this.context.fillStyle = this.color;
+				this.context.fill();
 			}
 
 			onConsume(entity) {
@@ -68,19 +89,6 @@
 			constructor(context, x, y) {
 				super(context, x, y, 100, "#00FF00");
 				this.consumedCount = 0;
-			}
-
-			display() {
-				this.context.beginPath();
-				this.context.arc(
-					this.x,
-					this.y,
-					this.radius,
-					0,
-					Math.PI*2,
-					true);
-				this.context.fillStyle = this.color;
-				this.context.fill();
 			}
 
 			update(delta) {
@@ -106,12 +114,12 @@
 			onConsumed(entity) {
 				// Split entity into 16-sum(entity.count)
 				let parent = players[entity.parent_uid];
-				let pieces = Math.min(16 - parent.cells.length, Math.floor(entity.size / 9), 4) - 1;
+				let pieces = Math.min(16 - parent.cells.length, Math.floor(entity.size / 9), 4);
 				if (pieces > 0) {
 					let size = Math.floor(entity.size / pieces);
 					entity.size_set(size);
 					entity.time_spent_split = 0;
-					for (let i = 0; i < pieces; i++) {
+					for (let i = 0; i < pieces - 1; i++) {
 						let c = parent.cell_create(this.x, this.y, size);
 						// Need to push them apart!
 						cells[c.UID] = c;
@@ -122,12 +130,20 @@
 
 		class Pellet extends Entity {
 				// Consumables
-			constructor(context, x, y, size, color) {
-				super(context, x, y, size, color);
-				this.kdTreeKey = {x: this.x, y: this.y, key: this.UID};
+			constructor(context, x, y, size, color, parent_uid) {
+				super(context, x, y, size, color, parent_uid);
+				this.growth_ms_delay = 15000;
+				this.growth_ms_lapse = 0;
+				this.size_max = size * 5;
 			}
 
 			update(delta) {
+				this.growth_ms_lapse += delta;
+				if(this.size < this.size_max && this.growth_ms_lapse >= this.growth_ms_delay) {
+					this.growth_ms_lapse = 0;
+					this.size_set(this.size + 1);
+				}
+
 				this.velocity_x *= .95;
 				this.velocity_y *= .95;
 					//TODO: fix deceleration
@@ -135,25 +151,20 @@
 			}
 
 			display() {
-				this.context.beginPath();
-				this.context.arc(
-					this.x,
-					this.y,
-					this.radius,
-					0,
-					Math.PI*2,
-					true);
-				this.context.fillStyle = this.color;
-				this.context.fill();
+				super.display();
+				if (this.size >= this.size_max) {
+					this.context.lineWidth = 0.1;
+					this.context.strokeStyle = "#000000";
+					this.context.stroke();
+				}
 			}
 		}
 
 		class Cell extends Entity {
 				// Player, Enemy
 			constructor(context, x, y, size, color, parent_uid) {
-				super(context, x, y, size, color);
-				// Parents, Combination
-				this.parent_uid = parent_uid;
+				super(context, x, y, size, color, parent_uid);
+				// Combination
 				this.time_spent_split = 0;
 			}
 
@@ -161,35 +172,17 @@
 				if (this.size > 10) {
 					this.size_set (this.size - this.size * 0.002 * delta / 1000);
 				}
-				var x_before = this.x;
-				var y_before = this.y;
+				let x_before = this.x;
+				let y_before = this.y;
 
 				this.time_spent_split += delta;
-
-				var tv = players[this.parent_uid].targetX - this.x;
-				var uv = players[this.parent_uid].targetY - this.y;
-				var x_mult = tv > 0 ? 1 : -1;
-				var y_mult = uv > 0 ? 1 : -1;
-				uv = Math.abs(uv);
-				tv = Math.abs(tv);
-
-				var theta_r = Math.abs(Math.atan(uv/tv));
-				if (theta_r) {
-					this.velocity_x = Math.cos(theta_r) * this.velocity_acceleration * x_mult;
-					this.velocity_y = Math.sin(theta_r) * this.velocity_acceleration * y_mult;
+				let angle = angleFromPoints(this.x, this.y, players[this.parent_uid].targetX, players[this.parent_uid].targetY)
+				if (angle.theta) {
+					this.velocity_x = Math.cos(angle.theta) * this.velocity_acceleration * angle.x_mult;
+					this.velocity_y = Math.sin(angle.theta) * this.velocity_acceleration * angle.y_mult;
 				}
 
 				super.update(delta);
-				if (this.x - this.radius < 0 || this.x + this.radius > canvas_width) {
-					this.x = x_before;
-					this.velocity_x = 0;
-				}
-
-				if (this.y - this.radius < 0 || this.y + this.radius > canvas_height) {
-					this.y = y_before;
-					this.velocity_y = 0;
-				}
-
 				if (this.time_spent_split < 15000) {
 					let was_colliding = false;
 					let is_colliding = false;
@@ -212,24 +205,16 @@
 						this.y = y_before;
 					}
 				}
+
+				this.kdTreeKey_regenerate();
 			}
 
 			display() {
-				this.context.beginPath();
-				this.context.arc(
-					this.x,
-					this.y,
-					this.radius,
-					0,
-					Math.PI*2,
-					true);
-				this.context.fillStyle = this.color;
-				this.context.fill();
+				super.display();
 				this.context.strokeStyle = "rgba(255,255,255,0.85)";
 				this.context.font = "9px Courier New"
-				var text = this.context.measureText(parseInt(this.size));
-				this.context.strokeText(parseInt(this.size), this.x - text.width/2, this.y + 2.5);
-
+				let text = this.context.measureText(Math.floor(this.size));
+				this.context.strokeText(Math.floor(this.size), this.x - text.width/2, this.y + 2.5);
 				if (isTargetsDrawn) {
 					this.context.strokeStyle = "#FF0000";
 					this.context.beginPath();
@@ -241,24 +226,11 @@
 
 			onConsume(entity) {
 				this.size_set(this.size + entity.size);
-				if (this.x - this.radius < 0) {
-					this.x = this.radius;
-				} else if (this.x + this.radius > canvas_width) {
-					this.x = canvas_width - this.radius;
-				}
-				
-				if (this.y - this.radius < 0) {
-					this.y = this.radius;
-				} else if (this.y + this.radius > canvas_height) {
-					this.y = canvas_height - this.radius;
-				}
 			}
 
 			onConsumed(entity){
-				for(var key in players) {
+				for(let key in players) {
 					if (players[key].targetUID == this.UID) {
-						//TODO: alittle far reaching for cell1
-						// to manipulate all other cells
 						players[key].targetUID = null;
 						players[key].state = 0;
 					}
@@ -266,20 +238,10 @@
 			}
 
 			toString() {
-				var s = padLeft(" ", this.constructor.name, 7) + " " + padLeft("0",this.UID, 8) + " " + 
-						padLeft("0", parseInt(this.size), 4) + " " + padLeft("0", parseInt(this.x), 3) + "," + padLeft("0", parseInt(this.y), 3);
-				if (this.velocity_x < 0) {
-					s += " " + this.velocity_x.toFixed(2);
-				} else {
-					s += " 0" + this.velocity_x.toFixed(2);
-				}
-
-				if (this.velocity_x < 0) {
-					s += "," + this.velocity_y.toFixed(2);
-				} else {
-					s += ",0" + this.velocity_y.toFixed(2);
-				}
-
+				let s = padLeft(" ", this.constructor.name, 7) + " " + padLeft("0",this.UID, 8) + " " + 
+						padLeft("0", Math.floor(this.size), 4) + " " + padLeft("0", Math.floor(this.x), 3) + "," + padLeft("0", Math.floor(this.y), 3);
+				s += ((this.velocity_x < 0) ? " " : " 0") + this.velocity_x.toFixed(2);
+				s += ((this.velocity_y < 0) ? " " : " 0") + this.velocity_y.toFixed(2);
 				return s;
 			}
 		}
@@ -288,18 +250,17 @@
 				// Humans, Bots
 			constructor(context, color) {
 				this.context = context;
+				this.UID = Math.floor(Math.random() * 16777215);//0x1000000
 				if (color == null) {
-					color =  "#" + Math.floor(Math.random() * 16777215).toString(16);
+					color =  "#" + this.UID.toString(16);
 				}
 				this.color = color;
-				this.UID = Math.floor(Math.random() * 16777215);//0x1000000
 				this.state = 0;
 				// Functionality
 				this.is_split_ready = true;
 				this.is_eject_ready = true;
 				// Children
 				this.cells = [];
-				this.cell_class = Cell;
 				// Target
 				this.targetX = this.x;
 				this.targetY = this.y;
@@ -319,34 +280,27 @@
 					// aka hold mouse at one spot.
 			}
 
-			position_average() {
-				var x = 0;
-				var y = 0;
-				for(var i = 0; i < this.cells.length; i++) {
+			x_y_size() {
+				let x = 0;
+				let y = 0;
+				let s = 0;
+				for(let i = 0; i < this.cells.length; i++) {
 					x += this.cells[i].x;
 					y += this.cells[i].y;
-				}
-
-				return [x / this.cells.length, y / this.cells.length];
-			}
-
-			size() {
-				var s = 0;
-				for(var i = 0; i < this.cells.length; i++) {
 					s += this.cells[i].size;
 				}
 
-				return s;
+				return {x: x / this.cells.length, y: y / this.cells.length, size: s};
 			}
 
 			cell_create(x, y, size) {
-				var c = new this.cell_class(this.context, x, y, size, this.color, this.UID);
+				let c = new Cell(this.context, x, y, size, this.color, this.UID);
 				this.cells.push(c);
 				return c;
 			}
 
 			cell_delete(cell) {
-				for(var i = 0; i < this.cells.length; i++) {
+				for(let i = 0; i < this.cells.length; i++) {
 					if (cell.UID == this.cells[i].UID) {
 						this.cells.splice(i, 1);
 						break;
@@ -357,26 +311,18 @@
 			onEject() {
 				if (this.is_eject_ready) {
 					this.is_eject_ready = false;
-					for(var i = 0; i < this.cells.length; i++) {
-						var c = this.cells[i];
+					for(let i = 0; i < this.cells.length; i++) {
+						let c = this.cells[i];
 						if (c.size > 35) {
 							c.size_set(c.size - 18);
-							var p = new Pellet(this.context, c.x, c.y, 14.4, c.color);
+							let p = new Pellet(this.context, c.x, c.y, 14.4, c.color);
 							pellets[p.UID] = p;
-
-							var tv = this.targetX - p.x;
-							var uv = this.targetY - p.y;
-							var x_mult = tv > 0 ? 1 : -1;
-							var y_mult = uv > 0 ? 1 : -1;
-							uv = Math.abs(uv);
-							tv = Math.abs(tv);
-
-							var theta_r = Math.abs(Math.atan(uv/tv));
-							if (theta_r) {
-								p.velocity_x = Math.cos(theta_r) * p.velocity_acceleration * x_mult;
-								p.velocity_y = Math.sin(theta_r) * p.velocity_acceleration * y_mult;
-								p.x += (1 + Math.cos(theta_r) * (c.radius + p.radius)) * x_mult
-								p.y += (1 + Math.sin(theta_r) * (c.radius + p.radius)) * y_mult;
+							let angle = angleFromPoints(p.x, p.y, this.targetX, this.targetY);
+							if (angle.theta) {
+								p.velocity_x = Math.cos(angle.theta) * p.velocity_acceleration * angle.x_mult;
+								p.velocity_y = Math.sin(angle.theta) * p.velocity_acceleration * angle.y_mult;
+								p.x += (1 + Math.cos(angle.theta) * (c.radius + p.radius)) * angle.x_mult
+								p.y += (1 + Math.sin(angle.theta) * (c.radius + p.radius)) * angle.y_mult;
 							}
 						}
 					}
@@ -388,10 +334,24 @@
 			}
 
 			onSplit() {
-				if (this.is_split_ready && this.size > 35) {
+				if (this.is_split_ready) {
 					this.is_split_ready = false;
-					var radius = this.radius;
-					var size = this.size;
+					for(let key in this.cells) {
+						let c = this.cells[key];
+						if (c.size > 35 && this.cells.length < 16) {
+							let s = Math.floor(c.size / 2);
+							c.size_set(s);
+							let c2 = this.cell_create(c.x, c.y, s);
+							cells[c2.UID] = c2;
+							let angle = angleFromPoints(c2.x, c2.y, this.targetX, this.targetY);
+							if (angle.theta) {
+								c2.velocity_x = Math.cos(angle.theta) * c2.velocity_acceleration * angle.x_mult;
+								c2.velocity_y = Math.sin(angle.theta) * c2.velocity_acceleration * angle.y_mult;
+								c2.x += (1 + Math.cos(angle.theta) * (c.radius + c2.radius)) * angle.x_mult
+								c2.y += (1 + Math.sin(angle.theta) * (c.radius + c2.radius)) * angle.y_mult;
+							}
+						}
+					}
 				}
 			}
 
@@ -400,28 +360,9 @@
 			}
 
 			toString() {
-				var x_y = this.position_average();
-				var s = padLeft(" ", this.constructor.name, 7) + " " + padLeft("0",this.UID, 8) + " " + padLeft("0", parseInt(this.size()), 4) + " " + 
-							padLeft("0", parseInt(x_y[0]), 3) + "," + padLeft("0", parseInt(x_y[1]), 3) + "  " + padLeft("0", this.cells.length, 2);
-				return s;
-			}
-
-			state_to_string() {
-				var state = "";
-				switch(this.state) {
-					case 1:
-						state = "Pellet @ " + parseInt(this.targetX) + ", " + parseInt(this.targetY);
-						break;
-					case 2:
-						state = parseInt(this.size / cells[this.targetUID].size * 100) + "% of " + padLeft("0", this.targetUID, 8)
-									+ " @ " + parseInt(this.targetX) + ", " + parseInt(this.targetY);
-						break;
-					default:
-						state = "DEFAULT STATE";
-						break;
-				}
-
-				return state;
+				let x_y_s = this.x_y_size();
+				return padLeft(" ", this.constructor.name, 7) + " " + padLeft("0",this.UID, 8) + " " + padLeft("0", Math.floor(x_y_s.size), 4) + " " + 
+							padLeft("0", Math.floor(x_y_s.x), 3) + "," + padLeft("0", Math.floor(x_y_s.y), 3) + "  " + padLeft("0", this.cells.length, 2);
 			}
 		}
 
@@ -431,54 +372,38 @@
 			}
 
 			update(delta) {
-				var x_y = this.position_average();
-				var s = this.size();
-				var c = null;
-				var cellList = [];
-				for(var key in cells) {
-					if(cells[key].parent_uid != this.UID && cells[key].size * entity_consume_size_multiplier <= s) {
-						cellList.push({x: cells[key].x, y: cells[key].y, key: cells[key].UID});
+				let x_y_s = this.x_y_size();
+				let r = Math.sqrt(x_y_s.size / Math.PI);
+				let c = cellTree.nearest({x: x_y_s.x, y: x_y_s.y}, Object.keys(cells).length);
+					// c = [[Object, distanceValue], ...]; Object = { x, y, key }
+				let cell_to_eat = null;
+				for(let i = 0; i < c.length; i++) {
+					if (cells[c[i][0].key].parent_uid != this.UID && c[i][1] > 0 && c[i][1] < Math.pow(r * 10, 2) && cells[c[i][0].key].size * 1.50 < x_y_s.size) {
+						if (!cell_to_eat || c[i][1] < cell_to_eat[1]) {
+							cell_to_eat = c[i];
+						}
 					}
 				}
 
-				if(cellList.length) {
-					var cellTree = new kdTree(
-						cellList,
-						function(a, b) {
-							return Math.pow(a.x - b.x, 2) +  Math.pow(a.y - b.y, 2);
-						},
-						["x", "y"]
-					);
-
-					c = cellTree.nearest({x: x_y[0], y: x_y[1]}, 1);
-				}
-
-				var p = pellet_tree.nearest({x: x_y[0], y: x_y[1]}, 1);
-				if (c) {
+				let p = pellet_tree.nearest({x: x_y_s.x, y: x_y_s.y}, 1);
+					// p = [[Object, distanceValue], ...]; Object = { x, y, key }
+				if (cell_to_eat) {
 					this.state = 2;
-					this.target_update(c[0][0].x, c[0][0].y, c[0][0].key);
+					this.target_update(cell_to_eat[0].x, cell_to_eat[0].y, cell_to_eat[0].key);
 				} else {
 					this.state = 1;
-						// p = [[Object, distanceValue], ...]
-						// Object = { x, y, key }
 					if (p.length) {
 						this.target_update(p[0][0].x, p[0][0].y);
 					} else {
-						this.target_update(x_y[0], x_y[1]);
+						this.target_update(x_y_s.x, x_y_s.y);
 					}
 				}
-			}
-		}
-
-		class InputPlayer extends Player {
-				// The player, with user input
-			constructor(context, color) {
-				super(context, color);
 			}
 		}
 	</script>
 
 	<script type="text/javascript">
+		'use strict';
 		var entity_consume_size_multiplier = 1.25;
 			// You have to be 25% bigger to consume
 		function collison_consume_circle(entity1, entity2) {
@@ -494,7 +419,7 @@
 		}
 
 		function collision_consume_cell(e1, e2) {
-			var d = Math.sqrt(Math.pow(e1.x - e2.x, 2) + Math.pow(e1.y - e2.y, 2));
+			let d = Math.sqrt(Math.pow(e1.x - e2.x, 2) + Math.pow(e1.y - e2.y, 2));
 			if (e1.parent_uid == null || e1.parent_uid != e2.parent_uid) {
 				if (e1.size / entity_consume_size_multiplier >= e2.size) {
 					if (d <= (e1.radius - e2.radius * 0.15)) {
@@ -510,6 +435,24 @@
 
 		function padLeft (padValue, value, count) {
 			return (Array(count).join(padValue) + value).slice(-1 * count);
+		}
+
+		function angleFromPoints(x1, y1, x2, y2) {
+			let tv = x2 - x1;
+			let uv = y2 - y1;
+			let x_mult = tv > 0 ? 1 : -1;
+			let y_mult = uv > 0 ? 1 : -1;
+			uv = Math.abs(uv);
+			tv = Math.abs(tv);
+			let theta_r = Math.abs(Math.atan(uv/tv));
+			return {theta: theta_r, x_mult: x_mult, y_mult: y_mult};
+		}
+
+		function randomXYbySize(size) {
+			let r = Math.sqrt(size / Math.PI);
+			let x = r + Math.random() * (canvas_width - r * 2);
+			let y = r + Math.random() * (canvas_height - r * 2);
+			return {x: x, y: y};
 		}
 	</script>
 
@@ -531,19 +474,20 @@
 			// Players by unique id
 		var cells = {};
 			// Cells by unique id
-		var enemy_count_initial = 5;
-		var enemy_count_max = 10;
+		var cellTree = null;
+		var enemy_count_initial = 10;//5;
+		var enemy_count_max = 20;
 		var enemy_size_spawn = 250;
 		var enemy_spawn_ms_since = 0;
 		var enemy_spawn_ms_cooldown = 5000;
 		var pellets = {};
 			// Pellets by unique id
 		var pellet_tree = null;
-		var pellets_count_initial = 200;
+		var pellets_count_initial = 200;//200;
 		var pellets_count_max = 250;
-		var pellets_size_spawn = 5;//15;
+		var pellets_size_spawn = 1;//5;//15;
 		var pellets_spawn_ms_since = 0;
-		var pellets_spawn_ms_cooldown = 200;
+		var pellets_spawn_ms_cooldown = 50;//200;
 		var viruss = {};
 			// viruss by unique id
 		var virus_tree = null;
@@ -554,27 +498,22 @@
 
 		function init() {
 			//Initialize
-			player = new InputPlayer(ctx, "#7200da");
+			player = new Player(ctx, "#7200da");
 			players[player.UID] = player;
-			var c = player.cell_create(250, 250, 250)
+			let c = player.cell_create(250, 250, 250)
 			cells[c.UID] = c;
-			for(var i = 0; i < enemy_count_initial; i++) {
-				var s = enemy_size_spawn;//50 * (i + 1);
-				var r = Math.sqrt(s / Math.PI);
-				var x = r + Math.random() * (canvas_width - r * 2);
-				var y = r + Math.random() * (canvas_height - r * 2);
-				var e = new Enemy(ctx);
+			for(let i = 0; i < enemy_count_initial; i++) {
+				let x_y = randomXYbySize(enemy_size_spawn)
+				let e = new Enemy(ctx);
 				players[e.UID] = e;
-				var c = e.cell_create(x, y, s);
+				let c = e.cell_create(x_y.x, x_y.y, enemy_size_spawn);
 				cells[c.UID] = c;
 			}
 
-			var pellet_xy_list = [];
-			for(var i = 0; i < pellets_count_initial; i ++) {
-				var r = Math.sqrt(pellets_size_spawn / Math.PI);
-				var x = r + Math.random() * (canvas_width - r * 2);
-				var y = r + Math.random() * (canvas_height - r * 2);
-				var p = new Pellet(ctx, x, y, pellets_size_spawn);
+			let pellet_xy_list = [];
+			for(let i = 0; i < pellets_count_initial; i ++) {
+				let x_y = randomXYbySize(pellets_size_spawn)
+				let p = new Pellet(ctx, x_y.x, x_y.y, pellets_size_spawn);
 				pellets[p.UID] = p;
 				pellet_xy_list.push(p.kdTreeKey);
 			}
@@ -587,11 +526,9 @@
 				["x", "y"]
 			);
 
-			for(var i = 0; i < virus_count_initial; i++) {
-				var r = Math.sqrt(100 / Math.PI);
-				var x = r + Math.random() * (canvas_width - r * 2);
-				var y = r + Math.random() * (canvas_height - r * 2);
-				var v = new Virus(ctx, x, y);
+			for(let i = 0; i < virus_count_initial; i++) {
+				let x_y = randomXYbySize(100)
+				let v = new Virus(ctx, x_y.x, x_y.y);
 				viruss[v.UID] = v;
 			}
 		}
@@ -676,25 +613,38 @@
 					}
 				}
 
-				for(var key in players) {
+				// Construct tree
+				let cell_key_list = [];
+				for(let key in cells) {
+					cell_key_list.push(cells[key].kdTreeKey);
+				}
+
+				cellTree = new kdTree(
+					cell_key_list,
+					function(a, b) {
+						return Math.pow(a.x - b.x, 2) +  Math.pow(a.y - b.y, 2);
+					},
+					["x", "y"]
+				);
+				for(let key in players) {
 					players[key].update(delta);
 				}
 
-				for(var key in cells) {
+				for(let key in cells) {
 					cells[key].update(delta);
 				}
 
-				for(var key in viruss) {
+				for(let key in viruss) {
 					viruss[key].update(delta);
 				}
 
-				for(var key in pellets) {
+				for(let key in pellets) {
 					let is_consumed = false;
-					var pellet = pellets[key];
+					let pellet = pellets[key];
 					pellet.update(delta);
 					// Pellets vs Cells
-					for(var cKey in cells) {
-						var consumption = collison_consume_circle(cells[cKey], pellet);
+					for(let cKey in cells) {
+						let consumption = collison_consume_circle(cells[cKey], pellet);
 						if (consumption[0]) {
 							consumption[0].onConsume(consumption[1]);
 							pellet_tree.remove(pellet.kdTreeKey);
@@ -717,11 +667,11 @@
 					}
 				}
 
-				for(var k1 in cells) {
+				for(let k1 in cells) {
 					// Cells vs Cells
-					for(var k2 in cells) {
+					for(let k2 in cells) {
 						if (cells[k1].UID != cells[k2].UID) {
-							var consumption = collision_consume_cell(cells[k1], cells[k2]);
+							let consumption = collision_consume_cell(cells[k1], cells[k2]);
 							if (consumption[0]) {
 								consumption[0].onConsume(consumption[1]);
 								consumption[1].onConsumed(consumption[0]);
@@ -744,17 +694,13 @@
 					}
 				}
 
-
 				enemy_spawn_ms_since += delta;
 				if (Object.keys(cells).length < enemy_count_max && enemy_spawn_ms_since >= enemy_spawn_ms_cooldown) {
 					enemy_spawn_ms_since = 0;
-					var s = enemy_size_spawn;//50 * (i + 1);
-					var r = Math.sqrt(s / Math.PI);
-					var x = r + Math.random() * (canvas_width - r * 2);
-					var y = r + Math.random() * (canvas_height - r * 2);
-					var e = new Enemy(ctx);
+					let x_y = randomXYbySize(enemy_size_spawn);
+					let e = new Enemy(ctx);
 					players[e.UID] = e;
-					var c = e.cell_create(x, y, s);
+					let c = e.cell_create(x_y.x, x_y.y, enemy_size_spawn);
 					cells[c.UID] = c;
 				}
 
@@ -762,10 +708,8 @@
 				pellets_spawn_ms_since += delta;
 				if (Object.keys(pellets).length < pellets_count_max && pellets_spawn_ms_since >= pellets_spawn_ms_cooldown) {
 					pellets_spawn_ms_since = 0;
-					var r = Math.sqrt(pellets_size_spawn / Math.PI);
-					var x = r + Math.random() * (canvas_width - r * 2);
-					var y = r + Math.random() * (canvas_height - r * 2);
-					var p = new Pellet(ctx, x, y, pellets_size_spawn);
+					let x_y = randomXYbySize(pellets_size_spawn);
+					let p = new Pellet(ctx, x_y.x, x_y.y, pellets_size_spawn);
 					pellets[p.UID] = p;
 					pellet_tree.insert(p.kdTreeKey);
 				}
@@ -774,35 +718,32 @@
 				virus_spawn_ms_since += delta;
 				if (Object.keys(viruss).length < virus_count_max && virus_spawn_ms_since >= virus_spawn_ms_cooldown) {
 					virus_spawn_ms_since = 0;
-					var r = Math.sqrt(100 / Math.PI);
-					var x = r + Math.random() * (canvas_width - r * 2);
-					var y = r + Math.random() * (canvas_height - r * 2);
-					var v = new Virus(ctx, x, y, s);
+					let x_y = randomXYbySize(100);
+					let v = new Virus(ctx, x_y.x, x_y.y);
 					viruss[v.UID] = v;
 				}
-
 			}
 
-			viewWidth = Math.sqrt(player.size() / Math.PI) / 0.05;
-			let x_y = player.position_average();
-			viewX = x_y[0] - viewWidth/2;
-			if (viewX < 0) {
-				viewX = 0;
-			} else if (viewX > canvas_width) {
-				viewX = canvas_width;
-			}
-
-			viewY = x_y[1] - viewWidth/2;
-			if (viewY < 0) {
-				viewY = 0;
-			} else if (viewY > canvas_height) {
-				viewY = canvas_height;
-			}
-
-			viewScale = canvas_width / viewWidth;
 			ctx.restore();
 			ctx.save();
 			if (isScaled) {
+				let x_y_s = player.x_y_size();
+				viewWidth = Math.sqrt(x_y_s.size / Math.PI) / 0.05;
+				viewX = x_y_s.x - viewWidth/2;
+				if (viewX < 0) {
+					viewX = 0;
+				} else if (viewX + viewWidth > canvas_width) {
+					viewX = canvas_width - viewWidth;
+				}
+
+				viewY = x_y_s.y - viewWidth/2;
+				if (viewY < 0) {
+					viewY = 0;
+				} else if (viewY + viewWidth > canvas_height) {
+					viewY = canvas_height - viewWidth;
+				}
+
+				viewScale = canvas_width / viewWidth
 				ctx.scale(viewScale, viewScale);
 				ctx.translate(-viewX, -viewY);
 			}
@@ -812,7 +753,7 @@
 
 		function display() {
 			ctx.clearRect(0, 0, canvas_width, canvas_height);
-			ctx_info.clearRect(0, 0, 500, 500);
+			ctx_info.clearRect(0, 0, 500, 600);
 			ctx_info.strokeStyle = "rgba(0,0,0,0.85)";
 			ctx_info.font = "12px Courier New";
 			ctx_info.strokeText(
@@ -825,93 +766,86 @@
 			ctx_info.strokeText("   NAME"+" "+"   UID  "+" "+"SIZE"+" "+"  X,Y  "+" "+"CELL", 5, 12*1.5*2);
 			ctx_info.strokeText(player.toString(), 5, 12*1.5*3);
 
-			var _enemycount = 3;
-			for(var key in players) {
+			let _enemycount = 3;
+			for(let key in players) {
 				if (players[key] instanceof Enemy) {
 					_enemycount++;
 					ctx_info.strokeText(players[key].toString(), 5, 12*1.5 * _enemycount);
-					// if(cells[key] instanceof EnemyCell) {
-					// 	_enemycount++;
-					// 	ctx_info.strokeText("    ====>" + e.state_to_string(), 5, 12*1.5 * _enemycounts);
-					// }
 				}
 			}
 
-			for(var key in cells) {
+			for(let key in cells) {
 				cells[key].display();
 			}
 
-			for(var key in pellets) {
+			for(let key in pellets) {
 				pellets[key].display();
 			}
 
-			for(var key in viruss) {
+			for(let key in viruss) {
 				viruss[key].display();
 			}
 
 			// Delta, Frames per second:
-			var fps = game_delta.toFixed(2).toString() + "ms @ " + (1000/game_delta).toFixed(2).toString() + "fps";
-			var text = ctx_info.measureText(fps);
-			ctx_info.strokeText(fps, 500 - text.width - 5, 12*1.5);
+			let text = game_delta.toFixed(2).toString() + "ms @ " + (1000/game_delta).toFixed(2).toString() + "fps";
+			let mText = ctx_info.measureText(text);
+			ctx_info.strokeText(text, 500 - mText.width - 5, 12*1.5);
 			// Canvas
-			var mousexy = "canvas @  " + padLeft("0", canvas_width, 3) + "," + padLeft("0", canvas_height, 3);
-			var text = ctx_info.measureText(mousexy);
-			ctx_info.strokeText(mousexy, 500 - text.width - 5, 12*1.5*2);
+			text = "canvas @  " + padLeft("0", canvas_width, 3) + "," + padLeft("0", canvas_height, 3);
+			mText = ctx_info.measureText(text);
+			ctx_info.strokeText(text, 500 - mText.width - 5, 12*1.5*2);
 			// View: Scale / Translate
-			var mousexy = "view width:  " + padLeft("0", parseInt(viewWidth), 4);
-			var text = ctx_info.measureText(mousexy);
-			ctx_info.strokeText(mousexy, 500 - text.width - 5, 12*1.5*3);
-			var mousexy = "view scale:  " + viewScale.toFixed(2);
-			var text = ctx_info.measureText(mousexy);
-			ctx_info.strokeText(mousexy, 500 - text.width - 5, 12*1.5*4);
-			var mousexy = "view   @  " + padLeft("0", parseInt(viewX), 3) + "," + padLeft("0", parseInt(viewY), 3);
-			var text = ctx_info.measureText(mousexy);
-			ctx_info.strokeText(mousexy, 500 - text.width - 5, 12*1.5*5);
+			text = "view width:  " + padLeft("0", Math.floor(viewWidth), 4);
+			mText = ctx_info.measureText(text);
+			ctx_info.strokeText(text, 500 - mText.width - 5, 12*1.5*3);
+			text = "view scale:  " + viewScale.toFixed(2);
+			mText = ctx_info.measureText(text);
+			ctx_info.strokeText(text, 500 - mText.width - 5, 12*1.5*4);
+			text = "view   @  " + padLeft("0", Math.floor(viewX), 3) + "," + padLeft("0", Math.floor(viewY), 3);
+			mText = ctx_info.measureText(text);
+			ctx_info.strokeText(text, 500 - mText.width - 5, 12*1.5*5);
 			// Mouse info
-			var mousexy = "mouse  @  " + padLeft("0", mouseX, 3) + "," + padLeft("0", mouseY, 3);
-			var text = ctx_info.measureText(mousexy);
-			ctx_info.strokeText(mousexy, 500 - text.width - 5, 12*1.5*6);
-			var mousexy = "virtual@  " + padLeft("0", parseInt(viewX + mouseX / viewScale), 3) + "," + padLeft("0", parseInt(viewY + mouseY / viewScale), 3);
-			var text = ctx_info.measureText(mousexy);
-			ctx_info.strokeText(mousexy, 500 - text.width - 5, 12*1.5*7);
+			text = "mouse  @  " + padLeft("0", mouseX, 3) + "," + padLeft("0", mouseY, 3);
+			mText = ctx_info.measureText(text);
+			ctx_info.strokeText(text, 500 - mText.width - 5, 12*1.5*6);
+			text = "virtual@  " + padLeft("0", Math.floor(viewX + mouseX / viewScale), 3) + "," + padLeft("0", Math.floor(viewY + mouseY / viewScale), 3);
+			mText = ctx_info.measureText(text);
+			ctx_info.strokeText(text, 500 - mText.width - 5, 12*1.5*7);
 
 
 			// Status: Targets, Pause, Scale
-			var text = ctx_info.measureText("P = ");
-			ctx_info.strokeText("P = ", 5, 500 - 12*1.5*1);
+			mText = ctx_info.measureText("P = ");
+			ctx_info.strokeText("P = ", 275, 500 - 12*1.5*1);
 			if (isPaused) {
 				ctx_info.strokeStyle = "#FF0000";
 			}
-			ctx_info.strokeText("Paused!", 5 + text.width, 500 - 12*1.5);
+			ctx_info.strokeText("Paused!", 275 + mText.width, 500 - 12*1.5);
 
 			ctx_info.strokeStyle = "#000000";
-			var text = ctx_info.measureText("S = ");
-			ctx_info.strokeText("S = ", 5, 500 - 12*1.5*2);
+			mText = ctx_info.measureText("S = ");
+			ctx_info.strokeText("S = ", 275, 500 - 12*1.5*2);
 			if (!isScaled) {
 				ctx_info.strokeStyle = "#FF0000";
 			}
-			ctx_info.strokeText("No Scaling!", 5 + text.width, 500 - 12*1.5*2);
+			ctx_info.strokeText("No Scaling!", 275 + mText.width, 500 - 12*1.5*2);
 
 			ctx_info.strokeStyle = "#000000";
-			var text = ctx_info.measureText("T = ");
-			ctx_info.strokeText("T = ", 5, 500 - 12*1.5*3);
+			mText = ctx_info.measureText("T = ");
+			ctx_info.strokeText("T = ", 275, 500 - 12*1.5*3);
 			if (isTargetsDrawn) {
 				ctx_info.strokeStyle = "#FF0000";
 			}
-			ctx_info.strokeText("Targets Drawn!", 5 + text.width, 500 - 12*1.5*3);
+			ctx_info.strokeText("Targets Drawn!", 275 + mText.width, 500 - 12*1.5*3);
 
 		}
 
 		window.onload = function() {
 			init();
-			//Game Loop
-			var mainloop_updateLast = null;
+			var mainloop_updateLast = performance.now();
 			(function mainLoop(nowTime) {
-				if (!mainloop_updateLast) mainloop_updateLast = nowTime;
-				var delta = nowTime - mainloop_updateLast;
-				mainloop_updateLast = nowTime;
-				update(delta);
+				update(nowTime - mainloop_updateLast);
 				display();
+				mainloop_updateLast = nowTime;
 				requestAnimationFrame(mainLoop);
 			})(performance.now());
 		}
