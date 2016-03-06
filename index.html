@@ -1,465 +1,21 @@
 <html>
-<head>
-	<title>cells</title>
-</head>
+<head><title>cells</title></head>
 <body bgcolor="#24AF69">
-	<canvas id="cells" width="720" height="720" style="background-color: #F0F8FF; float: left;"></canvas>
-	<br/>
-	<canvas id="info" width="500" height="600" style="background-color: #F0F8FF; margin: 10px;"></canvas>
+	<canvas id="cellsCanvas" width="720" height="720" style="background-color: #F0F8FF; float: left;"></canvas><br/>
+	<canvas id="infoCanvas" width="500" height="600" style="background-color: #F0F8FF; margin: 10px;"></canvas>
 	<script type="text/javascript" src="external/kd-tree/kdTree-min.js"></script>
-	<script type="text/javascript">
-		"use strict";
-		//Classes
-		class Entity {
-			// Common parent for all displayed entites
-			constructor(context, x, y, size, color, parent_uid) {
-				this.context = context;
-				this.x = x;
-				this.y = y;
-				this.UID = Math.floor(Math.random() * 16777215);//0x1000000
-				this.parent_uid = parent_uid;
-				if (color == null) {
-					color =  "#" + this.UID.toString(16);
-				}
-				this.color = color;
-				this.size_set(size);
-				this.kdTreeKey = {x: this.x, y: this.y, key: this.UID};
-				this.velocity_x = 0;
-				this.velocity_y = 0;
-			}
-
-			kdTreeKey_regenerate() {
-				this.kdTreeKey = {x: this.x, y: this.y, key: this.UID};
-			}
-
-			size_set (size) {
-				if (size != this.size) {
-					this.size = size;
-					this.velocity_acceleration = 2.2 * Math.pow(this.size, -0.439);
-					this.radius = Math.sqrt(this.size / Math.PI);
-					if (this.x - this.radius < 0) {
-						this.x = this.radius;
-					} else if (this.x + this.radius > canvas_width) {
-						this.x = canvas_width - this.radius;
-					}
-					
-					if (this.y - this.radius < 0) {
-						this.y = this.radius;
-					} else if (this.y + this.radius > canvas_height) {
-						this.y = canvas_height - this.radius;
-					}
-				}
-			}
-
-			update(delta) {
-				let x_before = this.x;
-				let y_before = this.y;
-				this.x += this.velocity_x;
-				this.y += this.velocity_y;
-				if (this.x - this.radius < 0 || this.x + this.radius > canvas_width) {
-					this.x = x_before;
-					this.velocity_x = 0;
-				}
-
-				if (this.y - this.radius < 0 || this.y + this.radius > canvas_height) {
-					this.y = y_before;
-					this.velocity_y = 0;
-				}
-			}
-
-			display() {
-				this.context.beginPath();
-				this.context.arc(
-					this.x, this.y, this.radius,
-					0, Math.PI*2, true);
-				this.context.fillStyle = this.color;
-				this.context.fill();
-			}
-
-			onConsume(entity) {
-				throw new Error("Provide concrete implementation");
-			}
-
-			onConsumed(entity) {
-				throw new Error("Provide concrete implementation");
-			}
-		}
-
-		class Virus extends Entity {
-			constructor(context, x, y) {
-				super(context, x, y, 100, "#00FF00");
-				this.consumedCount = 0;
-			}
-
-			update(delta) {
-				this.velocity_x *= .95;
-				this.velocity_y *= .95;
-					//TODO: fix deceleration
-				super.update(delta);
-			}
-
-			onConsume(entity) {
-				this.consumedCount++;
-				this.size_set(this.size + entity.size);
-				if (this.consumedCount >= 4) {
-					this.consumedCount = 0;
-					this.size_set(100);
-					let v = new Virus(this.context, this.x, this.y);
-					v.velocity_x = entity.velocity_x * 2;
-					v.velocity_y = entity.velocity_y * 2;
-					viruss[v.UID] = v;
-				}
-			}
-
-			onConsumed(entity) {
-				// Split entity into 16-sum(entity.count)
-				let parent = players[entity.parent_uid];
-				let pieces = Math.min(16 - parent.cells.length, Math.floor(entity.size / 9), 4);
-				if (pieces > 0) {
-					let size = Math.floor(entity.size / pieces);
-					entity.size_set(size);
-					entity.time_spent_split = 0;
-					for (let i = 0; i < pieces - 1; i++) {
-						let c = parent.cell_create(this.x, this.y, size);
-						// Need to push them apart!
-						cells[c.UID] = c;
-					}
-				}
-			}
-		}
-
-		class Pellet extends Entity {
-				// Consumables
-			constructor(context, x, y, size, color, parent_uid) {
-				super(context, x, y, size, color, parent_uid);
-				this.growth_ms_delay = 15000;
-				this.growth_ms_lapse = 0;
-				this.size_max = size * 5;
-			}
-
-			update(delta) {
-				this.growth_ms_lapse += delta;
-				if(this.size < this.size_max && this.growth_ms_lapse >= this.growth_ms_delay) {
-					this.growth_ms_lapse = 0;
-					this.size_set(this.size + 1);
-				}
-
-				this.velocity_x *= .95;
-				this.velocity_y *= .95;
-					//TODO: fix deceleration
-				super.update(delta);
-			}
-
-			display() {
-				super.display();
-				if (this.size >= this.size_max) {
-					this.context.lineWidth = 0.1;
-					this.context.strokeStyle = "#000000";
-					this.context.stroke();
-				}
-			}
-		}
-
-		class Cell extends Entity {
-				// Player, Enemy
-			constructor(context, x, y, size, color, parent_uid) {
-				super(context, x, y, size, color, parent_uid);
-				// Combination
-				this.time_spent_split = 0;
-			}
-
-			update(delta) {
-				if (this.size > 10) {
-					this.size_set (this.size - this.size * 0.002 * delta / 1000);
-				}
-				let x_before = this.x;
-				let y_before = this.y;
-
-				this.time_spent_split += delta;
-				let angle = angleFromPoints(this.x, this.y, players[this.parent_uid].targetX, players[this.parent_uid].targetY)
-				if (angle.theta) {
-					this.velocity_x = Math.cos(angle.theta) * this.velocity_acceleration * angle.x_mult;
-					this.velocity_y = Math.sin(angle.theta) * this.velocity_acceleration * angle.y_mult;
-				}
-
-				super.update(delta);
-				if (this.time_spent_split < 15000) {
-					let was_colliding = false;
-					let is_colliding = false;
-					for(let i = 0; i < players[this.parent_uid].cells.length; i++) {
-						let c = players[this.parent_uid].cells[i];
-						if (c.UID != this.UID && c.time_spent_split < 15000) {
-							let d = Math.sqrt(Math.pow(this.x - c.x, 2) + Math.pow(this.y - c.y, 2));
-							let db = Math.sqrt(Math.pow(x_before - c.x, 2) + Math.pow(y_before - c.y, 2));
-							if (d < c.radius + this.radius) {
-								is_colliding = true;
-							}
-							if (db < c.radius + this.radius) {
-								was_colliding = true;
-							}
-						}
-					}
-
-					if (!was_colliding && is_colliding) {
-						this.x = x_before;
-						this.y = y_before;
-					}
-				}
-
-				this.kdTreeKey_regenerate();
-			}
-
-			display() {
-				super.display();
-				this.context.strokeStyle = "rgba(255,255,255,0.85)";
-				this.context.font = "9px Courier New"
-				let text = this.context.measureText(Math.floor(this.size));
-				this.context.strokeText(Math.floor(this.size), this.x - text.width/2, this.y + 2.5);
-				if (isTargetsDrawn) {
-					this.context.strokeStyle = "#FF0000";
-					this.context.beginPath();
-					this.context.moveTo(this.x, this.y);
-					this.context.lineTo(players[this.parent_uid].targetX, players[this.parent_uid].targetY);
-					this.context.stroke();
-				}
-			}
-
-			onConsume(entity) {
-				this.size_set(this.size + entity.size);
-			}
-
-			onConsumed(entity){
-				for(let key in players) {
-					if (players[key].targetUID == this.UID) {
-						players[key].targetUID = null;
-						players[key].state = 0;
-					}
-				}
-			}
-
-			toString() {
-				let s = padLeft(" ", this.constructor.name, 7) + " " + padLeft("0",this.UID, 8) + " " + 
-						padLeft("0", Math.floor(this.size), 4) + " " + padLeft("0", Math.floor(this.x), 3) + "," + padLeft("0", Math.floor(this.y), 3);
-				s += ((this.velocity_x < 0) ? " " : " 0") + this.velocity_x.toFixed(2);
-				s += ((this.velocity_y < 0) ? " " : " 0") + this.velocity_y.toFixed(2);
-				return s;
-			}
-		}
-
-		class Player {
-				// Humans, Bots
-			constructor(context, color) {
-				this.context = context;
-				this.UID = Math.floor(Math.random() * 16777215);//0x1000000
-				if (color == null) {
-					color =  "#" + this.UID.toString(16);
-				}
-				this.color = color;
-				this.state = 0;
-				// Functionality
-				this.is_split_ready = true;
-				this.is_eject_ready = true;
-				// Children
-				this.cells = [];
-				// Target
-				this.targetX = this.x;
-				this.targetY = this.y;
-				this.targetUID = null;
-			}
-
-			update(delta) {
-			}
-
-			target_update(targetX, targetY, targetUID) {
-					// Move towards target
-				this.targetX = targetX;
-				this.targetY = targetY;
-				this.targetUID = targetUID;
-					//TODO: Need to settle at target
-					// currently will keep bouncing,
-					// aka hold mouse at one spot.
-			}
-
-			x_y_size() {
-				let x = 0;
-				let y = 0;
-				let s = 0;
-				for(let i = 0; i < this.cells.length; i++) {
-					x += this.cells[i].x;
-					y += this.cells[i].y;
-					s += this.cells[i].size;
-				}
-
-				return {x: x / this.cells.length, y: y / this.cells.length, size: s};
-			}
-
-			cell_create(x, y, size) {
-				let c = new Cell(this.context, x, y, size, this.color, this.UID);
-				this.cells.push(c);
-				return c;
-			}
-
-			cell_delete(cell) {
-				for(let i = 0; i < this.cells.length; i++) {
-					if (cell.UID == this.cells[i].UID) {
-						this.cells.splice(i, 1);
-						break;
-					}
-				}
-			}
-
-			onEject() {
-				if (this.is_eject_ready) {
-					this.is_eject_ready = false;
-					for(let i = 0; i < this.cells.length; i++) {
-						let c = this.cells[i];
-						if (c.size > 35) {
-							c.size_set(c.size - 18);
-							let p = new Pellet(this.context, c.x, c.y, 14.4, c.color);
-							pellets[p.UID] = p;
-							let angle = angleFromPoints(p.x, p.y, this.targetX, this.targetY);
-							if (angle.theta) {
-								p.velocity_x = Math.cos(angle.theta) * p.velocity_acceleration * angle.x_mult;
-								p.velocity_y = Math.sin(angle.theta) * p.velocity_acceleration * angle.y_mult;
-								p.x += (1 + Math.cos(angle.theta) * (c.radius + p.radius)) * angle.x_mult
-								p.y += (1 + Math.sin(angle.theta) * (c.radius + p.radius)) * angle.y_mult;
-							}
-						}
-					}
-				}
-			}
-
-			onEjectUp() {
-				this.is_eject_ready = true;
-			}
-
-			onSplit() {
-				if (this.is_split_ready) {
-					this.is_split_ready = false;
-					for(let key in this.cells) {
-						let c = this.cells[key];
-						if (c.size > 35 && this.cells.length < 16) {
-							let s = Math.floor(c.size / 2);
-							c.size_set(s);
-							let c2 = this.cell_create(c.x, c.y, s);
-							cells[c2.UID] = c2;
-							let angle = angleFromPoints(c2.x, c2.y, this.targetX, this.targetY);
-							if (angle.theta) {
-								c2.velocity_x = Math.cos(angle.theta) * c2.velocity_acceleration * angle.x_mult;
-								c2.velocity_y = Math.sin(angle.theta) * c2.velocity_acceleration * angle.y_mult;
-								c2.x += (1 + Math.cos(angle.theta) * (c.radius + c2.radius)) * angle.x_mult
-								c2.y += (1 + Math.sin(angle.theta) * (c.radius + c2.radius)) * angle.y_mult;
-							}
-						}
-					}
-				}
-			}
-
-			onSplitUp() {
-				this.is_split_ready = true;
-			}
-
-			toString() {
-				let x_y_s = this.x_y_size();
-				return padLeft(" ", this.constructor.name, 7) + " " + padLeft("0",this.UID, 8) + " " + padLeft("0", Math.floor(x_y_s.size), 4) + " " + 
-							padLeft("0", Math.floor(x_y_s.x), 3) + "," + padLeft("0", Math.floor(x_y_s.y), 3) + "  " + padLeft("0", this.cells.length, 2);
-			}
-		}
-
-		class Enemy extends Player {
-			constructor(context, color) {
-				super(context, color);
-			}
-
-			update(delta) {
-				let x_y_s = this.x_y_size();
-				let r = Math.sqrt(x_y_s.size / Math.PI);
-				let c = cellTree.nearest({x: x_y_s.x, y: x_y_s.y}, Object.keys(cells).length);
-					// c = [[Object, distanceValue], ...]; Object = { x, y, key }
-				let cell_to_eat = null;
-				for(let i = 0; i < c.length; i++) {
-					if (cells[c[i][0].key].parent_uid != this.UID && c[i][1] > 0 && c[i][1] < Math.pow(r * 10, 2) && cells[c[i][0].key].size * 1.50 < x_y_s.size) {
-						if (!cell_to_eat || c[i][1] < cell_to_eat[1]) {
-							cell_to_eat = c[i];
-						}
-					}
-				}
-
-				let p = pellet_tree.nearest({x: x_y_s.x, y: x_y_s.y}, 1);
-					// p = [[Object, distanceValue], ...]; Object = { x, y, key }
-				if (cell_to_eat) {
-					this.state = 2;
-					this.target_update(cell_to_eat[0].x, cell_to_eat[0].y, cell_to_eat[0].key);
-				} else {
-					this.state = 1;
-					if (p.length) {
-						this.target_update(p[0][0].x, p[0][0].y);
-					} else {
-						this.target_update(x_y_s.x, x_y_s.y);
-					}
-				}
-			}
-		}
-	</script>
-
-	<script type="text/javascript">
-		'use strict';
-		var entity_consume_size_multiplier = 1.25;
-			// You have to be 25% bigger to consume
-		function collison_consume_circle(entity1, entity2) {
-			// Player, Pellet
-			if(
-				((entity1.radius + entity2.radius) * (entity1.radius + entity2.radius)) >=
-				((entity1.x - entity2.x) * (entity1.x - entity2.x) + (entity1.y - entity2.y) * (entity1.y - entity2.y))
-			){
-					return [entity1, entity2];
-			}
-
-			return [null, null];
-		}
-
-		function collision_consume_cell(e1, e2) {
-			let d = Math.sqrt(Math.pow(e1.x - e2.x, 2) + Math.pow(e1.y - e2.y, 2));
-			if (e1.parent_uid == null || e1.parent_uid != e2.parent_uid) {
-				if (e1.size / entity_consume_size_multiplier >= e2.size) {
-					if (d <= (e1.radius - e2.radius * 0.15)) {
-						return [e1, e2];
-					}
-				}
-			} else if (e1.parent_uid == e2.parent_uid && e1.time_spent_split > 15000 && e2.time_spent_split > 15000 && d <= (e1.radius - e2.radius * 0.15)) {
-				return [e1, e2];
-			}
-
-			return [null, null];
-		}
-
-		function padLeft (padValue, value, count) {
-			return (Array(count).join(padValue) + value).slice(-1 * count);
-		}
-
-		function angleFromPoints(x1, y1, x2, y2) {
-			let tv = x2 - x1;
-			let uv = y2 - y1;
-			let x_mult = tv > 0 ? 1 : -1;
-			let y_mult = uv > 0 ? 1 : -1;
-			uv = Math.abs(uv);
-			tv = Math.abs(tv);
-			let theta_r = Math.abs(Math.atan(uv/tv));
-			return {theta: theta_r, x_mult: x_mult, y_mult: y_mult};
-		}
-
-		function randomXYbySize(size) {
-			let r = Math.sqrt(size / Math.PI);
-			let x = r + Math.random() * (canvas_width - r * 2);
-			let y = r + Math.random() * (canvas_height - r * 2);
-			return {x: x, y: y};
-		}
-	</script>
-
+	<script type="text/javascript" src="entity/entity.js"></script>
+	<script type="text/javascript" src="entity/entitygroup.js"></script>
+	<script type="text/javascript" src="entity/pellet.js"></script>
+	<script type="text/javascript" src="entity/virus.js"></script>
+	<script type="text/javascript" src="entity/cell.js"></script>
+	<script type="text/javascript" src="player/player.js"></script>
+	<script type="text/javascript" src="player/enemy.js"></script>
+	<script type="text/javascript" src="util/util.js"></script>
 	<script type="text/javascript">
 		'use strict';
 		//View
-		var canvas = document.getElementById("cells");
+		var canvas = document.getElementById("cellsCanvas");
 		canvas.tabIndex = 0;
 		canvas.focus();
 		//TODO: Global canvas bounds
@@ -467,74 +23,33 @@
 		var canvas_height = canvas.height;
 		var canvas_bounds = canvas.getBoundingClientRect();
 		var ctx = canvas.getContext("2d");
-		var ctx_info = document.getElementById("info").getContext("2d");
+		var ctx_info = document.getElementById("infoCanvas").getContext("2d");
 
 		var player = null;
-		var players = {};
-			// Players by unique id
 		var cells = {};
 			// Cells by unique id
 		var cellTree = null;
-		var enemy_count_initial = 10;//5;
-		var enemy_count_max = 20;
-		var enemy_size_spawn = 250;
-		var enemy_spawn_ms_since = 0;
-		var enemy_spawn_ms_cooldown = 5000;
-		var pellets = {};
-			// Pellets by unique id
-		var pellet_tree = null;
-		var pellets_count_initial = 200;//200;
-		var pellets_count_max = 250;
-		var pellets_size_spawn = 1;//5;//15;
-		var pellets_spawn_ms_since = 0;
-		var pellets_spawn_ms_cooldown = 50;//200;
-		var viruss = {};
-			// viruss by unique id
-		var virus_tree = null;
-		var virus_count_initial = 10;
-		var virus_count_max = 20;
-		var virus_spawn_ms_since = 0;
-		var virus_spawn_ms_cooldown = 5000;
-
+		var pelletGroup = new EntityGroup(ctx, Pellet, 1000, 1250, 1, 50);
+		var virusGroup = new EntityGroup(ctx, Virus, 25, 50, 100, 2500);
+		var playerGroup = new EntityGroup(ctx, Enemy, 25, 40, 250, 2500, true);
+		var keyDownEvents = {};
 		function init() {
 			//Initialize
 			player = new Player(ctx, "#7200da");
-			players[player.UID] = player;
-			let c = player.cell_create(250, 250, 250)
-			cells[c.UID] = c;
-			for(let i = 0; i < enemy_count_initial; i++) {
-				let x_y = randomXYbySize(enemy_size_spawn)
-				let e = new Enemy(ctx);
-				players[e.UID] = e;
-				let c = e.cell_create(x_y.x, x_y.y, enemy_size_spawn);
-				cells[c.UID] = c;
-			}
-
-			let pellet_xy_list = [];
-			for(let i = 0; i < pellets_count_initial; i ++) {
-				let x_y = randomXYbySize(pellets_size_spawn)
-				let p = new Pellet(ctx, x_y.x, x_y.y, pellets_size_spawn);
-				pellets[p.UID] = p;
-				pellet_xy_list.push(p.kdTreeKey);
-			}
-
-			pellet_tree = new kdTree(
-				pellet_xy_list,
-				function(a, b) {
-					return Math.pow(a.x - b.x, 2) +  Math.pow(a.y - b.y, 2);
-				},
-				["x", "y"]
-			);
-
-			for(let i = 0; i < virus_count_initial; i++) {
-				let x_y = randomXYbySize(100)
-				let v = new Virus(ctx, x_y.x, x_y.y);
-				viruss[v.UID] = v;
-			}
+			playerGroup.insertEntity(player);
+			pelletGroup.init();
+			virusGroup.init();
+			playerGroup.init();
+			keyDownEvents = {
+				32: function() { player.onSplit(); },
+				80: function() { isPaused = !isPaused; },
+				83: function() { isScaled = !isScaled; },
+				84: function() { isTargetsDrawn = !isTargetsDrawn; },
+				87: function() { player.onEject(); }
+			};
 		}
 
 		//Handle User Input
-		var keyDown = new Array();
 		var mouseX = null;
 		var mouseY = null;
 		canvas.addEventListener("mousemove", function(event) {
@@ -546,11 +61,10 @@
 				player.target_update(mouseX, mouseY);
 			}
 		});
+
 		window.addEventListener("keydown", function(event) {
-			keyDown[event.keyCode.toString()] = true;
-		});
-		window.addEventListener("keyup", function(event) {
-			keyDown[event.keyCode.toString()] = false;
+			let f = keyDownEvents[event.keyCode.toString()];
+			if (f) { f(); }
 		});
 
 		var game_delta = null;
@@ -559,168 +73,71 @@
 		var viewY = null;
 		var viewScale = null;
 		var isScaled = true;
-		var isScaledReady = true;
 		var isPaused = false;
-		var isPausedReady = true;
 		var isTargetsDrawn = false;
-		var isTargetsDrawnReady = true;
 		function update(delta) {
-			if (typeof(keyDown["80"]) === "boolean") {
-				if (keyDown["80"]) {
-					if (isPausedReady) {
-						isPaused = !isPaused;
-						isPausedReady = false;
-					}
-				} else {
-					isPausedReady = true;
-				}
-			}
-			if (typeof(keyDown["83"]) === "boolean") {
-				if (keyDown["83"]) {
-					if (isScaledReady) {
-						isScaled = !isScaled;
-						isScaledReady = false;
-					}
-				} else {
-					isScaledReady = true;
-				}
-			}
-			if (typeof(keyDown["84"]) === "boolean") {
-				if (keyDown["84"]) {
-					if (isTargetsDrawnReady) {
-						isTargetsDrawn = !isTargetsDrawn;
-						isTargetsDrawnReady = false;
-					}
-				} else {
-					isTargetsDrawnReady = true;
-				}
-			}
-
 			if (!isPaused) {
-				//Apply input
-				if (typeof(keyDown["32"]) === "boolean") {
-					if (keyDown["32"]) {
-						player.onSplit();
-					} else {
-						player.onSplitUp();
-					}
-				}
-				if (typeof(keyDown["87"]) === "boolean") {
-					if (keyDown["87"]) {
-						player.onEject();
-					} else {
-						player.onEjectUp();
-					}
-				}
-
 				// Construct tree
 				let cell_key_list = [];
 				for(let key in cells) {
 					cell_key_list.push(cells[key].kdTreeKey);
 				}
 
-				cellTree = new kdTree(
-					cell_key_list,
-					function(a, b) {
-						return Math.pow(a.x - b.x, 2) +  Math.pow(a.y - b.y, 2);
-					},
-					["x", "y"]
-				);
-				for(let key in players) {
-					players[key].update(delta);
-				}
-
+				cellTree = new kdTree(cell_key_list, distanceSortValue, ["x", "y"]);
+				playerGroup.update(delta);
 				for(let key in cells) {
 					cells[key].update(delta);
 				}
 
-				for(let key in viruss) {
-					viruss[key].update(delta);
-				}
-
-				for(let key in pellets) {
+				pelletGroup.update(delta);
+				virusGroup.update(delta)
+				pelletGroup._map.forEach(function (value, key) {
 					let is_consumed = false;
-					let pellet = pellets[key];
-					pellet.update(delta);
-					// Pellets vs Cells
-					for(let cKey in cells) {
+					let pellet = value;
+					for(let cKey in cells) { // Pellets vs Cells
 						let consumption = collison_consume_circle(cells[cKey], pellet);
 						if (consumption[0]) {
 							consumption[0].onConsume(consumption[1]);
-							pellet_tree.remove(pellet.kdTreeKey);
-							delete pellets[pellet.UID];
+							pelletGroup.deleteEntity(pellet);
 							is_consumed = true;
 							break;
 						}
 					}
 
-					if (!is_consumed) {
-						for(let vKey in viruss) {
-							let consumption = collison_consume_circle(viruss[vKey], pellet);
+					if (!is_consumed && value.parent_uid != null) {
+						virusGroup._map.forEach(function (value, key) {
+							let consumption = collison_consume_circle(value, pellet);
 							if (consumption[0]) {
 								consumption[0].onConsume(consumption[1]);
-								pellet_tree.remove(pellet.kdTreeKey);
-								delete pellets[pellet.UID];
-								break;
+								virusGroup.deleteEntity(value);
 							}
-						}
+						});
 					}
-				}
+				});
 
 				for(let k1 in cells) {
-					// Cells vs Cells
-					for(let k2 in cells) {
+					for(let k2 in cells) { // Cells vs Cells
 						if (cells[k1].UID != cells[k2].UID) {
 							let consumption = collision_consume_cell(cells[k1], cells[k2]);
 							if (consumption[0]) {
 								consumption[0].onConsume(consumption[1]);
 								consumption[1].onConsumed(consumption[0]);
-								players[consumption[1].parent_uid].cell_delete(consumption[1]);
-								delete cells[consumption[1].UID];
-								if (!players[consumption[1].parent_uid].cells.length) {
-									delete players[consumption[1].parent_uid];
+								playerGroup.get(consumption[1].parent_uid).cell_delete(consumption[1]);
+								if (!playerGroup.get(consumption[1].parent_uid).cells.length) {
+									playerGroup.deleteEntity(playerGroup.get(consumption[1].parent_uid));
 								}
 							}
 						}
 					}
 
-					for(let vKey in viruss) {
-						let consumption = collision_consume_cell(cells[k1], viruss[vKey]);
+					virusGroup._map.forEach(function (value, key) {
+						let consumption = collision_consume_cell(cells[k1], value);
 						if (consumption[0]) {
 							consumption[0].onConsume(consumption[1]);
 							consumption[1].onConsumed(consumption[0]);
-							delete viruss[viruss[vKey].UID];
+							virusGroup.deleteEntity(value);
 						}
-					}
-				}
-
-				enemy_spawn_ms_since += delta;
-				if (Object.keys(cells).length < enemy_count_max && enemy_spawn_ms_since >= enemy_spawn_ms_cooldown) {
-					enemy_spawn_ms_since = 0;
-					let x_y = randomXYbySize(enemy_size_spawn);
-					let e = new Enemy(ctx);
-					players[e.UID] = e;
-					let c = e.cell_create(x_y.x, x_y.y, enemy_size_spawn);
-					cells[c.UID] = c;
-				}
-
-				pellets_count_max = 250 + 50 * Object.keys(cells).length;
-				pellets_spawn_ms_since += delta;
-				if (Object.keys(pellets).length < pellets_count_max && pellets_spawn_ms_since >= pellets_spawn_ms_cooldown) {
-					pellets_spawn_ms_since = 0;
-					let x_y = randomXYbySize(pellets_size_spawn);
-					let p = new Pellet(ctx, x_y.x, x_y.y, pellets_size_spawn);
-					pellets[p.UID] = p;
-					pellet_tree.insert(p.kdTreeKey);
-				}
-
-				virus_count_max = 20 + Object.keys(cells).length;
-				virus_spawn_ms_since += delta;
-				if (Object.keys(viruss).length < virus_count_max && virus_spawn_ms_since >= virus_spawn_ms_cooldown) {
-					virus_spawn_ms_since = 0;
-					let x_y = randomXYbySize(100);
-					let v = new Virus(ctx, x_y.x, x_y.y);
-					viruss[v.UID] = v;
+					});
 				}
 			}
 
@@ -753,90 +170,61 @@
 
 		function display() {
 			ctx.clearRect(0, 0, canvas_width, canvas_height);
+			for(let key in cells) {
+				cells[key].display();
+			}
+			pelletGroup.display();
+			virusGroup.display();
+
 			ctx_info.clearRect(0, 0, 500, 600);
 			ctx_info.strokeStyle = "rgba(0,0,0,0.85)";
 			ctx_info.font = "12px Courier New";
 			ctx_info.strokeText(
-				"Pellets: " + Object.keys(pellets).length.toString() + "/" + pellets_count_max.toString() + ";" + 
-				"   Cells: " + Object.keys(cells).length.toString() + "/" + enemy_count_max.toString() + ";" + 
-				"   Virus: " + Object.keys(viruss).length.toString() + "/" + virus_count_max.toString() + ";",
+				"Pellets: " + pelletGroup.length().toString() + "/" + pelletGroup.count_max.toString() + ";" + 
+				"   Cells: " + Object.keys(cells).length.toString() + "/" + playerGroup.count_max.toString() + ";" + 
+				"   Virus: " + virusGroup.length().toString() + "/" + virusGroup.count_max.toString() + ";",
 				5, 12*1.5
 			);
 
 			ctx_info.strokeText("   NAME"+" "+"   UID  "+" "+"SIZE"+" "+"  X,Y  "+" "+"CELL", 5, 12*1.5*2);
-			ctx_info.strokeText(player.toString(), 5, 12*1.5*3);
+			let _enemycount = 2;
+			playerGroup._map.forEach(function (value, key) {
+				_enemycount++;
+				ctx_info.strokeText(value.toString(), 5, 12*1.5 * _enemycount);
+			});
 
-			let _enemycount = 3;
-			for(let key in players) {
-				if (players[key] instanceof Enemy) {
-					_enemycount++;
-					ctx_info.strokeText(players[key].toString(), 5, 12*1.5 * _enemycount);
-				}
+			[	game_delta.toFixed(2).toString() + "ms @ " + (1000/game_delta).toFixed(2).toString() + "fps",
+				"canvas @  " + padLeft("0", canvas_width, 3) + "," + padLeft("0", canvas_height, 3),
+				"view width:  " + padLeft("0", Math.floor(viewWidth), 4),
+				"view scale:  " + viewScale.toFixed(2),
+				"view   @  " + padLeft("0", Math.floor(viewX), 3) + "," + padLeft("0", Math.floor(viewY), 3),
+				"mouse  @  " + padLeft("0", mouseX, 3) + "," + padLeft("0", mouseY, 3),
+				"virtual@  " + padLeft("0", Math.floor(viewX + mouseX / viewScale), 3) + "," + padLeft("0", Math.floor(viewY + mouseY / viewScale), 3),
+			].forEach(function(text, index) {
+				strokeCanvasText(ctx_info, text, 495, 12*1.5*(index+1), true);
+			});
+
+			[	{text: "P = Paused!", condition: isPaused},
+				{text: "S = Scaled!", condition: isScaled},
+				{text: "T = Target!", condition: isTargetsDrawn}
+			].forEach(function(entity, index) {
+				strokeCanvasConditionalText(ctx_info, entity.text,
+					400, 500 - 12*1.5*(index+1), false,
+					"#000000", entity.condition, "#FF0000");
+			});
+		}
+
+		function strokeCanvasText(context, text, x, y, alignRight) {
+			let mText = context.measureText(text);
+			if (alignRight) {
+				x -= mText.width;
 			}
+			context.strokeText(text, x, y);
+		}
 
-			for(let key in cells) {
-				cells[key].display();
-			}
-
-			for(let key in pellets) {
-				pellets[key].display();
-			}
-
-			for(let key in viruss) {
-				viruss[key].display();
-			}
-
-			// Delta, Frames per second:
-			let text = game_delta.toFixed(2).toString() + "ms @ " + (1000/game_delta).toFixed(2).toString() + "fps";
-			let mText = ctx_info.measureText(text);
-			ctx_info.strokeText(text, 500 - mText.width - 5, 12*1.5);
-			// Canvas
-			text = "canvas @  " + padLeft("0", canvas_width, 3) + "," + padLeft("0", canvas_height, 3);
-			mText = ctx_info.measureText(text);
-			ctx_info.strokeText(text, 500 - mText.width - 5, 12*1.5*2);
-			// View: Scale / Translate
-			text = "view width:  " + padLeft("0", Math.floor(viewWidth), 4);
-			mText = ctx_info.measureText(text);
-			ctx_info.strokeText(text, 500 - mText.width - 5, 12*1.5*3);
-			text = "view scale:  " + viewScale.toFixed(2);
-			mText = ctx_info.measureText(text);
-			ctx_info.strokeText(text, 500 - mText.width - 5, 12*1.5*4);
-			text = "view   @  " + padLeft("0", Math.floor(viewX), 3) + "," + padLeft("0", Math.floor(viewY), 3);
-			mText = ctx_info.measureText(text);
-			ctx_info.strokeText(text, 500 - mText.width - 5, 12*1.5*5);
-			// Mouse info
-			text = "mouse  @  " + padLeft("0", mouseX, 3) + "," + padLeft("0", mouseY, 3);
-			mText = ctx_info.measureText(text);
-			ctx_info.strokeText(text, 500 - mText.width - 5, 12*1.5*6);
-			text = "virtual@  " + padLeft("0", Math.floor(viewX + mouseX / viewScale), 3) + "," + padLeft("0", Math.floor(viewY + mouseY / viewScale), 3);
-			mText = ctx_info.measureText(text);
-			ctx_info.strokeText(text, 500 - mText.width - 5, 12*1.5*7);
-
-
-			// Status: Targets, Pause, Scale
-			mText = ctx_info.measureText("P = ");
-			ctx_info.strokeText("P = ", 275, 500 - 12*1.5*1);
-			if (isPaused) {
-				ctx_info.strokeStyle = "#FF0000";
-			}
-			ctx_info.strokeText("Paused!", 275 + mText.width, 500 - 12*1.5);
-
-			ctx_info.strokeStyle = "#000000";
-			mText = ctx_info.measureText("S = ");
-			ctx_info.strokeText("S = ", 275, 500 - 12*1.5*2);
-			if (!isScaled) {
-				ctx_info.strokeStyle = "#FF0000";
-			}
-			ctx_info.strokeText("No Scaling!", 275 + mText.width, 500 - 12*1.5*2);
-
-			ctx_info.strokeStyle = "#000000";
-			mText = ctx_info.measureText("T = ");
-			ctx_info.strokeText("T = ", 275, 500 - 12*1.5*3);
-			if (isTargetsDrawn) {
-				ctx_info.strokeStyle = "#FF0000";
-			}
-			ctx_info.strokeText("Targets Drawn!", 275 + mText.width, 500 - 12*1.5*3);
-
+		function strokeCanvasConditionalText(context, text, x, y, alignRight, style, condition, conditionalStyle) {
+			context.strokeStyle = condition ? conditionalStyle : style;
+			strokeCanvasText(context, text, x, y, alignRight);
 		}
 
 		window.onload = function() {
