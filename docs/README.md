@@ -3,13 +3,17 @@ _Inspiration and feature set  of [Agar.io](https://en.wikipedia.org/wiki/Agar.io
 >Players control one or more cells where the goal is to gain as much mass as possible by eating pellets and cells smaller than the player's cell while avoiding larger ones which can eat the player's cells.
 
 
-Player's cell in purple @ 300 size
+<table>
+    <tr>
+        <td>Player's cell in purple @ 300 size</td>
+        <td>Map of all cells</td>
+    </tr>
+    <tr>
+        <td><img src="./01_Cell.PNG"/></td>
+        <td><img src="./02_Cells.PNG"/></td>
+    </tr>
+</table>
 
-![Player's Cell](./01_Cell.PNG)
-
-Map of all cells
-
-![Player's Cell](./02_Cells.PNG)
 
 Displaying each cell's current target
 
